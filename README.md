@@ -2,7 +2,7 @@
 Visualization of nanoAod
 
 ## To run:
-  * Setup ROOTSYS environment:
+  * Setup ROOTSYS environment from root master branch:
   
   `build/bin/thisroot.sh`
 
