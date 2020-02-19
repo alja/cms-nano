@@ -1,17 +1,17 @@
-<mvc:View height="100%" class="sapUiSizeCompact" 
+<mvc:View height="100%" class="sapUiSizeCompact"
           controllerName="custom.controller.MyNewMain"
           xmlns="sap.m"
           xmlns:mvc="sap.ui.core.mvc"
           xmlns:l="sap.ui.layout"
           xmlns:commons="sap.ui.commons">
    <Page title="EVE-7" showNavButton="false" showFooter="false" enableScrolling="false"
-         showHeader="true" 
-         showSubHeader="false" id="CanvasMainPage" >
+         showHeader="true"
+         showSubHeader="true" id="CanvasMainPage">
      <customHeader>
        <Bar id="otb1" >
          <contentLeft>
           <Button icon="sap-icon://user-edit" type="Transparent"
-               tooltip="Toggle GED editor" press="toggleGedEditor" enabled="false" />
+               tooltip="Toggle GED editor" press="toggleGedEditor"/>
             <MenuButton text="File"  enabled="false">
                <menu>
                   <Menu itemSelected="onFileMenuAction">
@@ -55,7 +55,7 @@
                 </Menu>
               </menu>
             </MenuButton>
-            
+
             <MenuButton text="Help" type="Default"  enabled="true"
                         styleClass="rightMargin sapUiTinyMarginBottom" visible="true">
               <menu>
@@ -69,23 +69,24 @@
             </MenuButton>
          </contentLeft>
          <contentMiddle>
-                <FormattedText id="centerTitle" htmlText="CMS nanoad Event Display"/>
+                <FormattedText id="centerTitle" htmlText="ABC Event Display"/>
          </contentMiddle>
          <contentRight>
            <Image src="mydir/logo-fireworks.png"
                   class="sapUiSmallMarginEnd" height="100%"/>
-            
+
          </contentRight>
-            </Bar>
-</customHeader>
-        <OverflowToolbar id="otb2">   
+        </Bar>
+     </customHeader>
+     <subHeader>
+        <OverflowToolbar id="otb2">
           <Text text="Navigate events: " />
 
            <Button id="prevEvent" icon="sap-icon://media-reverse"
-                   press="prevEvent" /> 
+                   press="prevEvent" />
            <Button id="nextEvent" icon="sap-icon://media-play"
                    press="nextEvent" />
-           
+
             <ToolbarSpacer />
             <Label id="runLabel" text="Run" />
             <Input id="runInput" width="200px" enabled="false" />
@@ -124,6 +125,8 @@
             <Button text="Edit" type="Transparent" enabled="false" ></Button>
             -->
          </OverflowToolbar>
+      </subHeader>
+<!--
       <subHeader>
          <OverflowToolbar>
             <Button icon="sap-icon://open-folder" type="Transparent" />
@@ -135,6 +138,7 @@
                tooltip="Quit ROOT session" press="onQuitRootPress" />
          </OverflowToolbar>
       </subHeader>
+-->
       <content>
         <l:Splitter orientation="Horizontal" id="MainAreaSplitter">
           <l:contentAreas>

@@ -3,71 +3,57 @@ sap.ui.define(['rootui5/eve7/controller/Summary.controller',
                "sap/ui/model/json/JSONModel",
                "sap/m/Table",
                "sap/m/Column",
-               "sap/m/Text",               
+               "sap/m/Text",
 	       "sap/m/ColumnListItem",
-	       "sap/ui/model/Sorter"
-              ], function(SummaryController, EveManager, JSONModel, Table, Column, Text,ColumnListItem, Sorter) {
-   "use strict";    
+	       "sap/ui/model/Sorter",
+   "rootui5/eve7/controller/Ged.controller"
+              ], function(SummaryController, EveManager, JSONModel, Table, Column, Text,ColumnListItem, Sorter, GedController) {
+   "use strict";
 
-   return SummaryController.extend("custom.MyNewSummary", {                    
+   return SummaryController.extend("custom.MyNewSummary", {
 
       onInit: function() {
          SummaryController.prototype.onInit.apply(this, arguments);
          this.expandLevel = 0;
       },
+
       event: function(lst) {
-         SummaryController.prototype.event( lst);
+         SummaryController.prototype.event(lst);
          oTree.expandToLevel(0);
       },
-      
-      createSummaryModel: function(tgt, src) {
-         if (tgt === undefined) {
-            tgt = [];
-            src = this.mgr.childs[0].childs[2].childs;
-            console.log('original model', src);
-            for (var i = 0; i < src.length; i++) {
-               if (src[i].fName == "Collections") {
-                  src = src[i].childs;
-                  console.log("got ", src);
-               }
-            }
-         }
-         for (var n=0;n<src.length;++n) {
-            var elem = src[n];
 
-            var newelem = { fName: elem.fName, id: elem.fElementId, fHighlight: "None", fBackground: "" };
+      createModel: function() {
+         // this is central method now to create summary model
+         // one could select top main element which will be shown in SummaryView
 
-            if (this.canEdit(elem))
-               newelem.fType = "DetailAndActive";
-            else
-               newelem.fType = "Active";
+         this.summaryElements = {};
 
-            newelem.masterid = elem.fMasterId || elem.fElementId;
-
-            tgt.push(newelem);
-            if ((elem.childs !== undefined) && this.anyVisible(elem.childs))
-               newelem.childs = this.createSummaryModel([], elem.childs);
+         var src = this.mgr.childs[0].childs[2].childs;
+         for (var i = 0; i < src.length; i++) {
+            if (src[i].fName == "Collections")
+               src = src[i].childs;
          }
 
-         return tgt;
-         },
+         return this.createSummaryModel([], src, "/");
+      },
+
       addCollection: function (evt){
          if (!this.table)
             this.createTable();
 
-         if (!this.popover) {	    
+         if (!this.popover) {
             this.popover = new sap.m.Popover("popupTable", {title:"Popup TEST"});
 
-	    
+
 	    let sw = new sap.m.SearchField();
 	    sw.placeholder="Filter";
 	    var pt = this.table;
 	    sw.attachSearch(function(oEvent) {
-	       var txt = oEvent.getParameter("query");	       
+	       var txt = oEvent.getParameter("query");
 	       let filter = new sap.ui.model.Filter([new sap.ui.model.Filter("firstName", sap.ui.model.FilterOperator.Contains, txt), new sap.ui.model.Filter("lastName", sap.ui.model.FilterOperator.Contains, txt)],false);
 	       pt.getBinding("items").filter(filter, "Applications");
 	    });
-	    
+
             this.popover.addContent(sw);
             this.popover.addContent(this.table);
 
@@ -76,12 +62,12 @@ sap.ui.define(['rootui5/eve7/controller/Summary.controller',
 	    let fa = new sap.m.OverflowToolbar();
 	    let b1 = new sap.m.Button({text:"AddCollection"});
 	    fa.addContent(b1);
-	    b1.attachPress(function(oEvent) {	       
-               var oSelectedItem = pt.getSelectedItems(); 
+	    b1.attachPress(function(oEvent) {
+               var oSelectedItem = pt.getSelectedItems();
 	       var item1 = oSelectedItem[0];
 	       console.log("SELECT ",item1.getBindingContext().getObject());
 	    });
-	    
+
 	    let b2 = new sap.m.Button({text:"Close"});
 	    fa.addContent(b2);
 	    b2.attachPress(function(oEvent) {
@@ -91,8 +77,8 @@ sap.ui.define(['rootui5/eve7/controller/Summary.controller',
          }
          this.popover.openBy(this.byId("addCollection"));
       },
-      
-      
+
+
       createTable: function() {
 	 // create some dummy JSON data
 	 var data = {
@@ -135,8 +121,8 @@ sap.ui.define(['rootui5/eve7/controller/Summary.controller',
 	    else {
                sv = false;
 	    }
-	    
-	    var oSorter = new Sorter(col.sId, sv);	    
+
+	    var oSorter = new Sorter(col.sId, sv);
 	    var oItems = this.getBinding("items");
 	    oItems.sort(oSorter);
 
@@ -147,7 +133,7 @@ sap.ui.define(['rootui5/eve7/controller/Summary.controller',
 
 	 // bind the Table items to the data collection
 	 table.bindItems({
-	    path : "/names",				  
+	    path : "/names",
 	    template : new ColumnListItem({
 	       cells: [
 		  new sap.m.Text({text: "{lastName}"}),
