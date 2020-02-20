@@ -69,7 +69,7 @@
             </MenuButton>
          </contentLeft>
          <contentMiddle>
-                <FormattedText id="centerTitle" htmlText="ABC Event Display"/>
+                <FormattedText id="centerTitle" htmlText="CMS Nanoaod"/>
          </contentMiddle>
          <contentRight>
            <Image src="mydir/logo-fireworks.png"
