@@ -22,6 +22,7 @@
 #include "TParticle.h"
 #include "TRandom.h"
 #include "TApplication.h"
+#include "TMathBase.h"
 
 
 // globals
@@ -49,7 +50,7 @@ class ElectronProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::
    using REveDataSimpleProxyBuilderTemplate<nanoaod::Electron>::Build;
    void Build(const nanoaod::Electron& c_electron, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
    {
-      
+
       nanoaod::Electron& electron = (nanoaod::Electron&)(c_electron);
       int pdg = 11 * electron.charge();
 
@@ -78,7 +79,7 @@ class MuonProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::Muon
    using REveDataSimpleProxyBuilderTemplate<nanoaod::Muon>::Build;
    void Build(const nanoaod::Muon& c_electron, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
    {
-      
+
       nanoaod::Muon& electron = (nanoaod::Muon&)(c_electron);
       int pdg = 11 * electron.charge();
 
@@ -114,7 +115,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
 
       //AMT tmp hack ...
       nanoaod::Jet& dj = (nanoaod::Jet&)(cdj);
-      
+
       auto jet = new REveJetCone();
       jet->SetCylinder(context->GetMaxR(), context->GetMaxZ());
       jet->AddEllipticCone(dj.eta(), dj.phi(), 0.2, 0.2);
@@ -146,9 +147,9 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
             debug = true;
             r = r_ecal/sin(theta);
          }
-
-         REveVector p1(0, (phi<TMath::Pi() ? r*fabs(sin(theta)) : -r*fabs(sin(theta))), r*cos(theta));
-         REveVector p2(0, (phi<TMath::Pi() ? (r+size)*fabs(sin(theta)) : -(r+size)*fabs(sin(theta))), (r+size)*cos(theta));
+         REveVector p1(0, TMath::Sign( r*fabs(sin(theta)), phi),  r*cos(theta));
+         r+=size;
+         REveVector p2(0, TMath::Sign(r*fabs(sin(theta)), phi),  r*cos(theta));
 
          auto marker = new REveScalableStraightLineSet("jetline");
          marker->SetScaleCenter(p1.fX, p1.fY, p1.fZ);
@@ -191,17 +192,17 @@ private:
 
 public:
    CollectionManager(nanoaod::Event* event) : m_event(event)
-   {  
+   {
        m_collections = eveMng->GetScenes()->FindChild("Collections");
        //      m_collections = eveMng->SpawnNewScene("Collections", "Collections");
    }
 
 
    void LoadCurrentEventInCollection(REveDataCollection* rdc)
-   {      
+   {
       rdc->ClearItems();
       rdc->DestroyElements();
-      nanoaod::MamaCollection& mc = m_event->RefColl(rdc->GetCName());      
+      nanoaod::MamaCollection& mc = m_event->RefColl(rdc->GetCName());
       std::string cname = rdc->GetName();
       printf("-------- LoadCurrentEventInCollection size %d\n",mc.get_n_entries() );
       for (int i = 0; i < mc.get_n_entries(); ++i)
@@ -247,7 +248,7 @@ public:
          return nullptr;
       }
    }
-   
+
    void  addCollection(std::string name, Color_t ccol = kBlue, bool showInTable=false) {
       nanoaod::MamaCollection& mc = m_event->RefColl(name);
       auto rdc = new REveDataCollection (mc.get_class_name());
@@ -256,7 +257,7 @@ public:
       m_collections->AddElement(rdc);
       LoadCurrentEventInCollection(rdc);
       printf("add collection instant proxy builders\n");
-     
+
       if (1) {
          // GL view types
          auto glBuilder = makeGLBuilderForType(rdc->GetItemClass());
@@ -319,7 +320,7 @@ public:
                                 this->ModelChanged( rdc, ids );
                              });
    }
-   
+
 
    void CollectionChanged(REveDataCollection* collection)
    {
@@ -351,7 +352,7 @@ class EventManager : public REveElement
 private:
    CollectionManager    *m_collectionMng{nullptr};
    nanoaod::Event       *m_event{nullptr};
-   
+
 public:
    EventManager(CollectionManager* m, nanoaod::Event* e):REveElement("EventManager") {m_collectionMng  = m; m_event = e; }
    virtual ~EventManager() {}
@@ -383,10 +384,10 @@ public:
       else {
           id = m_event->GetEvent() -1;
       }
-         
+
       printf("going to previous %d \n", id);
       m_event->GotoEvent(id);
-      
+
       UpdateTitle();
       m_collectionMng->RenewEvent();
    }
@@ -439,7 +440,7 @@ void createScenesAndViews()
 
 
    viewContext->SetTableViewInfo(tableInfo);
-   
+
    // Geometry
    auto b1 = new REveGeoShape("Barrel 1");
    float dr = 3;
@@ -461,7 +462,7 @@ void createScenesAndViews()
    }
       // collections
     auto collections = eveMng->SpawnNewScene("Collections", "Collections");
-   
+
    // Table
    if (1) {
       auto tableScene = eveMng->SpawnNewScene ("Tables", "Tables");
@@ -469,7 +470,7 @@ void createScenesAndViews()
       tableView->AddScene(tableScene);
       tableScene->AddElement(viewContext->GetTableViewInfo());
    }
-   
+
 }
 
 void evd(int portNum=9092)
@@ -481,7 +482,7 @@ void evd(int portNum=9092)
    eveMng = REveManager::Create();
    createScenesAndViews();
    auto collectionMng = new CollectionManager(event);
-   
+
    auto eventMng = new EventManager(collectionMng, event);
    eventMng->UpdateTitle();
    eventMng->SetName(event->GetFile()->GetName());
@@ -493,7 +494,7 @@ void evd(int portNum=9092)
    collectionMng->addCollection("MET", kRed, false);
    collectionMng->addCollection("Muon", kRed, false);
 
-   
+
    std::string locPath = "ui5";
    eveMng->AddLocation("mydir/", locPath);
    eveMng->SetDefaultHtmlPage("file:mydir/eventDisplay.html");
