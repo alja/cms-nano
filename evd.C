@@ -128,7 +128,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       double phi = dj.phi();
 
 
-      if (viewType == "Projected" )
+      if (viewType == "RhoZProjected" )
       {
          static const float_t offr = 6;
          float r_ecal = context->GetMaxR() + offr;
@@ -271,7 +271,7 @@ public:
 
                if (strncmp(scene->GetCTitle(), "Table", 5) == 0) continue;
 
-               if (!strncmp(scene->GetCTitle(), "Projected", 8))
+               if (!strncmp(scene->GetCTitle(), "RhoZProjected", 8))
                {
                   mngRhoZ->ImportElements(product, scene);
                   continue;
@@ -450,7 +450,7 @@ void createScenesAndViews()
 
    // Projected RhoZ
    if (1){
-      auto rhoZEventScene = eveMng->SpawnNewScene("RhoZ Scene","Projected");
+      auto rhoZEventScene = eveMng->SpawnNewScene("RhoZ Scene","RhoZProjected");
       mngRhoZ = new REveProjectionManager(REveProjection::kPT_RhoZ);
       mngRhoZ->SetImportEmpty(true);
       auto rhoZView = eveMng->SpawnNewViewer("RhoZ View");
