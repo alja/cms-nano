@@ -35,7 +35,7 @@ ROOT::Experimental::REveTrackPropagator* muonPropagator_g;
 using namespace ROOT::Experimental;
 
 
-Float_t EtaToTheta(Float_t eta)
+float EtaToTheta(float eta)
 {
    using namespace TMath;
 
@@ -105,62 +105,214 @@ class MuonProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::Muon
 
 class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
 {
-   bool HaveSingleProduct() const override { return false; }
+   struct Cell {
+      float thetaMin;
+      float thetaMax;
+      float phiMin;
+      float phiMax;
+   };
+      
+   bool HaveSingleProduct() const override { return true; }
 
+   void makeBarrelCell( Cell &cellData, float &offset , float towerH, float *pnts)
+   {
+      using namespace TMath;
+
+      float r1 = offset;
+      float r2 = r1 + towerH*Sin(cellData.thetaMin);
+      float z1In, z1Out, z2In, z2Out;
+
+      z1In  = r1/Tan(cellData.thetaMax);
+      z1Out = r2/Tan(cellData.thetaMax);
+      z2In  = r1/Tan(cellData.thetaMin);
+      z2Out = r2/Tan(cellData.thetaMin);
+
+      float cos1 = Cos(cellData.phiMin);
+      float sin1 = Sin(cellData.phiMin);
+      float cos2 = Cos(cellData.phiMax);
+      float sin2 = Sin(cellData.phiMax);
+
+      // 0
+      pnts[0] = r1*cos2;
+      pnts[1] = r1*sin2;
+      pnts[2] = z1In;
+      pnts += 3;
+      // 1
+      pnts[0] = r1*cos1;
+      pnts[1] = r1*sin1;
+      pnts[2] = z1In;
+      pnts += 3;
+      // 2
+      pnts[0] = r1*cos1;
+      pnts[1] = r1*sin1;
+      pnts[2] = z2In;
+      pnts += 3;
+      // 3
+      pnts[0] = r1*cos2;
+      pnts[1] = r1*sin2;
+      pnts[2] = z2In;
+      pnts += 3;
+      //---------------------------------------------------
+      // 4
+      pnts[0] = r2*cos2;
+      pnts[1] = r2*sin2;
+      pnts[2] = z1Out;
+      pnts += 3;
+      // 5
+      pnts[0] = r2*cos1;
+      pnts[1] = r2*sin1;
+      pnts[2] = z1Out;
+      pnts += 3;
+      // 6
+      pnts[0] = r2*cos1;
+      pnts[1] = r2*sin1;
+      pnts[2] = z2Out;
+      pnts += 3;
+      // 7
+      pnts[0] = r2*cos2;
+      pnts[1] = r2*sin2;
+      pnts[2] = z2Out;
+
+
+      offset += towerH*Sin(cellData.thetaMin);
+
+   }// end RenderBarrelCell
+   
+   void makeEndCapCell(Cell &cellData, float &offset, float towerH , float *pnts)
+   {
+      using namespace TMath;
+      float z1, r1In, r1Out, z2, r2In, r2Out;
+
+      z1    = offset;
+      z2    = z1 + towerH;
+
+      r1In  = z1*Tan(cellData.thetaMin);
+      r2In  = z2*Tan(cellData.thetaMin);
+      r1Out = z1*Tan(cellData.thetaMax);
+      r2Out = z2*Tan(cellData.thetaMax);
+
+      float cos2 = Cos(cellData.phiMin);
+      float sin2 = Sin(cellData.phiMin);
+      float cos1 = Cos(cellData.phiMax);
+      float sin1 = Sin(cellData.phiMax);
+   
+      // 0
+      pnts[0] = r1In*cos1;
+      pnts[1] = r1In*sin1;
+      pnts[2] = z1;
+      pnts += 3;
+      // 1
+      pnts[0] = r1In*cos2;
+      pnts[1] = r1In*sin2;
+      pnts[2] = z1;
+      pnts += 3;
+      // 2
+      pnts[0] = r2In*cos2;
+      pnts[1] = r2In*sin2;
+      pnts[2] = z2;
+      pnts += 3;
+      // 3
+      pnts[0] = r2In*cos1;
+      pnts[1] = r2In*sin1;
+      pnts[2] = z2;
+      pnts += 3;
+      //---------------------------------------------------
+      // 4
+      pnts[0] = r1Out*cos1;
+      pnts[1] = r1Out*sin1;
+      pnts[2] = z1;
+      pnts += 3;
+      // 5
+      pnts[0] = r1Out*cos2;
+      pnts[1] = r1Out*sin2;
+      pnts[2] = z1;
+      pnts += 3;
+      // 6
+      pnts[0] = r2Out*cos2;
+      pnts[1] = r2Out*sin2;
+      pnts[2] = z2;
+      pnts += 3;
+      // 7
+      pnts[0] = r2Out*cos1;
+      pnts[1] = r2Out*sin1;
+      pnts[2] = z2;
+
+
+      if (z1 > 0)
+         offset += towerH * Cos(cellData.thetaMin);
+      else
+         offset -= towerH * Cos(cellData.thetaMin);
+
+   } // end makeEndCapCell
+
+   
    using REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>::BuildViewType;
-
    void BuildViewType(const nanoaod::Jet& cdj, int idx, REveElement* iItemHolder,
-                      std::string viewType, const REveViewContext* context) override
+                 std::string viewType, const REveViewContext* context) override
    {
 
-      //AMT tmp hack ...
-      nanoaod::Jet& dj = (nanoaod::Jet&)(cdj);
+      printf("REveDataSimpleProxyBuilderTemplate BuildViewType [%s](%d) >>>\n\n\n\n\n", viewType.c_str(), idx);
+   }
 
+   void Build(const nanoaod::Jet& cdj, int idx, REveElement* iItemHolder,
+                const REveViewContext* context) override
+   {
+      nanoaod::Jet& dj = (nanoaod::Jet&)(cdj);
+      printf("REveDataSimpleProxyBuilderTemplate (%d) %f\n", idx, dj.eta());
       auto jet = new REveJetCone();
       jet->SetCylinder(context->GetMaxR(), context->GetMaxZ());
       jet->AddEllipticCone(dj.eta(), dj.phi(), 0.2, 0.2);
       SetupAddElement(jet, iItemHolder, true);
       jet->SetLineColor(jet->GetMainColor());
 
-      float  size  = 50.f * dj.pt(); // values are saved in scale
+
+      static const float_t offr = 20;
+      float r_ecal = context->GetMaxR() + offr;
+      float z_ecal = context->GetMaxZ() + offr;
+      float energyScale =  1.f;
+      float  transAngle = abs(atan(r_ecal/z_ecal));
+      float  size  = energyScale * dj.pt(); // values are saved in scale
       double theta = EtaToTheta(dj.eta());
-      //      printf("BuildViewType >>> %s jet theta =  %f, phi = %f \n",  iItemHolder->GetCName(), theta, dj.phi());
       double phi = dj.phi();
+      
+      Cell cell;
+      float ad = 0.02;
+      // thetaMin => etaMax, thetaMax => thetaMin
+      cell.thetaMax = EtaToTheta(dj.eta() - ad);
+      cell.thetaMin = EtaToTheta(dj.eta() + ad);
+      cell.phiMin = phi - ad;
+      cell.phiMax = phi + ad;
+      float pnts[24];
 
-
-      if (viewType == "RhoZProjected" )
+      if (theta < transAngle || (3.14-theta) < transAngle)
       {
-         static const float_t offr = 6;
-         float r_ecal = context->GetMaxR() + offr;
-         float z_ecal = context->GetMaxZ() + offr;
-
-         float  transAngle = abs(atan(r_ecal/z_ecal));
-         double r = 0;
-         bool debug = false;
-         if (theta < transAngle || 3.14-theta < transAngle)
+         printf("Set points for ENDCAP  REveBox [%d] ======================= \n", idx);
+         float offset = context->GetMaxZ();
+         float z1 =  TMath::Sign(offset + offr, (float) dj.eta());
+         makeEndCapCell(cell, z1,  TMath::Sign(size, dj.eta()), &pnts[0]);
+         REveBox* reveBox = new REveBox();
+         for (int z = 0; z < 8; z++)
          {
-            z_ecal = context->GetMaxZ() + offr/transAngle;
-            r = z_ecal/fabs(cos(theta));
+            int k = z*3;
+            reveBox->SetVertex(z, &pnts[k]);
          }
-         else
+         SetupAddElement(reveBox, iItemHolder, true);
+      }      
+      else
+      {
+         printf("Set points for BARREL  REveBox [%d] ======================= \n", idx);
+         float offset = context->GetMaxR() + offr ;
+         makeBarrelCell(cell, offset, offset + size, &pnts[0]);
+         REveBox* reveBox = new REveBox();
+         for (int z = 0; z < 8; z++)
          {
-            debug = true;
-            r = r_ecal/sin(theta);
+            int k = z*3;
+            reveBox->SetVertex(z, &pnts[k]);
          }
-         REveVector p1(0, TMath::Sign( r*fabs(sin(theta)), phi),  r*cos(theta));
-         r+=size;
-         REveVector p2(0, TMath::Sign(r*fabs(sin(theta)), phi),  r*cos(theta));
-
-         auto marker = new REveScalableStraightLineSet("jetline");
-         marker->SetScaleCenter(p1.fX, p1.fY, p1.fZ);
-         marker->AddLine(p1, p2);
-         marker->SetLineWidth(4);
-         if (debug)
-             marker->AddMarker(0, 0.9);
-
-         SetupAddElement(marker, iItemHolder, true);
-         marker->SetName(Form("line %s %d", Collection()->GetCName(), idx));
+          SetupAddElement(reveBox, iItemHolder, true);
       }
+      printf(" \n\n");
+      fflush(stdout);
    }
 
 
@@ -249,7 +401,8 @@ public:
       }
    }
 
-   void  addCollection(std::string name, Color_t ccol = kBlue, bool showInTable=false) {
+   REveDataCollection*  addCollection(std::string name, Color_t ccol = kBlue, bool showInTable=false)
+   {
       nanoaod::MamaCollection& mc = m_event->RefColl(name);
       auto rdc = new REveDataCollection (mc.get_class_name());
       rdc->SetItemClass(mc.get_item_class());
@@ -267,17 +420,18 @@ public:
             glBuilder->SetHaveAWindow(true);
             for (auto &scene: eveMng->GetScenes()->RefChildren())
             {
-               REveElement *product = glBuilder->CreateProduct(scene->GetTitle(), viewContext);
 
                if (strncmp(scene->GetCTitle(), "Table", 5) == 0) continue;
 
                if (!strncmp(scene->GetCTitle(), "RhoZProjected", 8))
                {
+                  REveElement *product = glBuilder->CreateProduct("RhoZViewType", viewContext);
                   mngRhoZ->ImportElements(product, scene);
                   continue;
                }
                else if ((!strncmp(scene->GetCName(), "Event scene", 8)))
                {
+                  REveElement *product = glBuilder->CreateProduct(scene->GetTitle(), viewContext);
                   scene->AddElement(product);
                }
             }
@@ -319,6 +473,8 @@ public:
                              {
                                 this->ModelChanged( rdc, ids );
                              });
+
+      return rdc;
    }
 
 
@@ -430,12 +586,12 @@ void createScenesAndViews()
 
    tableInfo->table("nanoaod::Jet").
       column("pt",  1, "i.pt()").
-      column("eta", 3, "i.pt()").
+      column("eta", 3, "i.eta()").
       column("phi", 3, "i.phi()");
 
    tableInfo->table("nanoaod::Electron").
       column("pt",  1, "i.pt()").
-      column("eta", 3, "i.pt()").
+      column("eta", 3, "i.eta()").
       column("phi", 3, "i.phi()");
 
 
@@ -476,7 +632,7 @@ void createScenesAndViews()
 void evd(int portNum=9092)
 {
    auto event = g_event;
-   event->GotoEvent(0);
+   event->GotoEvent(8);
 
    // init REve stuff
    eveMng = REveManager::Create();
@@ -489,7 +645,8 @@ void evd(int portNum=9092)
    eveMng->GetWorld()->AddElement(eventMng);
 
    // test collections
-   collectionMng->addCollection("Jet", kBlue, true);
+   auto rdc = collectionMng->addCollection("Jet", kBlue, true);
+   //   rdc->SetFilterExpr("i.pt() > 25");
    collectionMng->addCollection("Electron", kGreen, false);
    collectionMng->addCollection("MET", kRed, false);
    collectionMng->addCollection("Muon", kRed, false);
