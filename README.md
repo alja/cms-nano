@@ -14,4 +14,4 @@ Visualization of nanoAod
 
 `make`
 
-![screenshot] (https://gist.github.com/alja/80d1979652183b8510105b6129b686a8#file-test)
+![screenshot] (https://user-images.githubusercontent.com/2516492/78937920-cebbed80-7aa0-11ea-9ab9-7c8b5cd14957.png)
