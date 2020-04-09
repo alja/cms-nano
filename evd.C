@@ -258,24 +258,22 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
                 const REveViewContext* context) override
    {
       nanoaod::Jet& dj = (nanoaod::Jet&)(cdj);
-      printf("REveDataSimpleProxyBuilderTemplate (%d) %f\n", idx, dj.eta());
       auto jet = new REveJetCone();
-      jet->SetCylinder(context->GetMaxR(), context->GetMaxZ());
-      jet->AddEllipticCone(dj.eta(), dj.phi(), 0.2, 0.2);
+      jet->SetCylinder(context->GetMaxR() -5, context->GetMaxZ());
+      jet->AddEllipticCone(dj.eta(), dj.phi(), 0.2, 0.2);      
       SetupAddElement(jet, iItemHolder, true);
-      jet->SetLineColor(jet->GetMainColor());
+      jet->SetTitle(Form("jet %d", idx));
 
-
-      static const float_t offr = 20;
+      static const float_t offr = 5;
       float r_ecal = context->GetMaxR() + offr;
       float z_ecal = context->GetMaxZ() + offr;
-      float energyScale =  1.f;
+      float energyScale =  5.f;
       float  transAngle = abs(atan(r_ecal/z_ecal));
-      float  size  = energyScale * dj.pt(); // values are saved in scale
       double theta = EtaToTheta(dj.eta());
       double phi = dj.phi();
       
       Cell cell;
+      // hardcoded cell size
       float ad = 0.02;
       // thetaMin => etaMax, thetaMax => thetaMin
       cell.thetaMax = EtaToTheta(dj.eta() - ad);
@@ -284,35 +282,36 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       cell.phiMax = phi + ad;
       float pnts[24];
 
+      // an example of slices
+      std::vector<float> sliceVals;
+      sliceVals.push_back( dj.pt() * (1 - dj.chHEF()));
+      sliceVals.push_back( dj.pt() * dj.chHEF());
+      
       if (theta < transAngle || (3.14-theta) < transAngle)
       {
-         printf("Set points for ENDCAP  REveBox [%d] ======================= \n", idx);
-         float offset = context->GetMaxZ();
-         float z1 =  TMath::Sign(offset + offr, (float) dj.eta());
-         makeEndCapCell(cell, z1,  TMath::Sign(size, dj.eta()), &pnts[0]);
-         REveBox* reveBox = new REveBox();
-         for (int z = 0; z < 8; z++)
-         {
-            int k = z*3;
-            reveBox->SetVertex(z, &pnts[k]);
+         // printf("Set points for ENDCAP  REveBox [%d] ======================= \n", idx);
+         float offset = TMath::Sign(context->GetMaxZ(), dj.eta());
+         for (auto &val : sliceVals) {
+            offset +=  TMath::Sign(offr, dj.eta());
+            makeEndCapCell(cell, offset,  TMath::Sign(val*energyScale, dj.eta()), &pnts[0]);
+            REveBox* reveBox = new REveBox();
+            reveBox->SetVertices(pnts);
+            SetupAddElement(reveBox, iItemHolder, true);
          }
-         SetupAddElement(reveBox, iItemHolder, true);
       }      
       else
       {
-         printf("Set points for BARREL  REveBox [%d] ======================= \n", idx);
-         float offset = context->GetMaxR() + offr ;
-         makeBarrelCell(cell, offset, offset + size, &pnts[0]);
-         REveBox* reveBox = new REveBox();
-         for (int z = 0; z < 8; z++)
-         {
-            int k = z*3;
-            reveBox->SetVertex(z, &pnts[k]);
+         // printf("Set points for BARREL  REveBox [%d] ======================= \n", idx);
+         float offset = context->GetMaxR();
+         for (auto &val : sliceVals) {
+            offset += offr;
+            makeBarrelCell(cell, offset, val*energyScale, &pnts[0]);
+            REveBox* reveBox = new REveBox();
+            reveBox->SetVertices(pnts);
+            SetupAddElement(reveBox, iItemHolder, true);
+            reveBox->SetTitle(Form("jet %d", idx)); // amt this is workaround and should be unnecessary
          }
-          SetupAddElement(reveBox, iItemHolder, true);
       }
-      printf(" \n\n");
-      fflush(stdout);
    }
 
 
@@ -559,8 +558,8 @@ public:
 void createScenesAndViews()
 {
    //view context
-   float r = 300;
-   float z = 300;
+   float r = 139.5;
+   float z = 290;
    auto prop = new REveTrackPropagator();
    prop->SetMagFieldObj(new REveMagFieldDuo(350, -3.5, 2.0));
    prop->SetMaxR(r);
@@ -600,7 +599,7 @@ void createScenesAndViews()
    // Geometry
    auto b1 = new REveGeoShape("Barrel 1");
    float dr = 3;
-   b1->SetShape(new TGeoTube(290 , 300, 300));
+   b1->SetShape(new TGeoTube(r -2 , r+2, z));
    b1->SetMainColor(kCyan);
    eveMng->GetGlobalScene()->AddElement(b1);
 
@@ -632,7 +631,7 @@ void createScenesAndViews()
 void evd(int portNum=9092)
 {
    auto event = g_event;
-   event->GotoEvent(8);
+   event->GotoEvent(0);
 
    // init REve stuff
    eveMng = REveManager::Create();
@@ -647,8 +646,8 @@ void evd(int portNum=9092)
    // test collections
    auto rdc = collectionMng->addCollection("Jet", kBlue, true);
    //   rdc->SetFilterExpr("i.pt() > 25");
-   collectionMng->addCollection("Electron", kGreen, false);
-   collectionMng->addCollection("MET", kRed, false);
+   collectionMng->addCollection("Electron", kOrange + 7, false);
+   collectionMng->addCollection("MET", kGreen, false);
    collectionMng->addCollection("Muon", kRed, false);
 
 
