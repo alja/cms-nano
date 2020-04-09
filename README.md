@@ -14,4 +14,4 @@ Visualization of nanoAod
 
 `make`
 
-![screenshot] (https://user-images.githubusercontent.com/2516492/78937920-cebbed80-7aa0-11ea-9ab9-7c8b5cd14957.png)
+![screenshot](https://user-images.githubusercontent.com/2516492/78937920-cebbed80-7aa0-11ea-9ab9-7c8b5cd14957.png)
