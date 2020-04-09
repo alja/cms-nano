@@ -10,6 +10,8 @@ Visualization of nanoAod
   
   `git clone https://github.com/alja/cms-nano.git`
 
-  * run event display as a  Makfile target:
+  * start event display with make
 
-`make evd`
+`make`
+
+https://gist.github.com/alja/80d1979652183b8510105b6129b686a8#file-test
