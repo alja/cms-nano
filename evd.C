@@ -355,17 +355,17 @@ public:
       rdc->DestroyElements();
       nanoaod::MamaCollection& mc = m_event->RefColl(rdc->GetCName());
       std::string cname = rdc->GetName();
-      printf("-------- LoadCurrentEventInCollection size %d\n",mc.get_n_entries() );
+      //printf("-------- LoadCurrentEventInCollection size %d\n",mc.get_n_entries() );
       for (int i = 0; i < mc.get_n_entries(); ++i)
       {
          TString pname(Form("%s %2d",  cname.c_str(), i));
-         printf("access item %d \n", i);
+         // printf("access item %d \n", i);
          rdc->AddItem(mc.get_item(i), pname.Data(), "");
       }
    }
 
    void RenewEvent()
-   {
+   {      
       for (auto &el: m_collections->RefChildren())
       {
          auto c = dynamic_cast<REveDataCollection *>(el);
@@ -408,7 +408,6 @@ public:
       rdc->SetMainColor(ccol);
       m_collections->AddElement(rdc);
       LoadCurrentEventInCollection(rdc);
-      printf("add collection instant proxy builders\n");
 
       if (1) {
          // GL view types
@@ -452,12 +451,10 @@ public:
          tableMng->AddDelegate([=]() { tableBuilder->ConfigChanged(); });
          for (auto &scene: eveMng->GetScenes()->RefChildren())
          {
-            printf("COMPARE %s %s\n", scene->GetCTitle(), scene->GetCName());
             if (strncmp(scene->GetCTitle(), "Table", 5) == 0)
             {
                scene->AddElement(tablep);
                tableBuilder->Build(rdc, tablep, viewContext );
-               printf("build table view");
                break;
             }
          }
@@ -651,6 +648,12 @@ void evd(int portNum=9092)
    collectionMng->addCollection("Muon", kRed, false);
 
 
+   nanoaod::MamaCollection& mc = event->RefColl("EventInfo");
+   nanoaod::EventInfo ei = mc.get_item_with_class<nanoaod::EventInfo>(0);
+   printf("ffffff run = %d, lumi = %d, event = %llu\n", ei.run(), ei.luminosityBlock(), ei.event() );
+
+   printf("mama eventinfo entries = %d %p event= %llu\n", mc.get_n_entries(),mc.get_item(0),((nanoaod::EventInfo*) mc.get_item(0))->event());
+   
    std::string locPath = "ui5";
    eveMng->AddLocation("mydir/", locPath);
    eveMng->SetDefaultHtmlPage("file:mydir/eventDisplay.html");

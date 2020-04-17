@@ -143,7 +143,7 @@
         <l:Splitter orientation="Horizontal" id="MainAreaSplitter">
           <l:contentAreas>
              <mvc:XMLView id="Summary" viewName="custom.view.MySummary" height="100%">
-                <mvc:layoutData><l:SplitterLayoutData size="25%"/></mvc:layoutData>
+                <mvc:layoutData><l:SplitterLayoutData size="15%"/></mvc:layoutData>
              </mvc:XMLView>
           </l:contentAreas>
         </l:Splitter>
