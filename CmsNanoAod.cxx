@@ -25,6 +25,11 @@ MamaCollection::MamaCollection(const std::string& name) :
 
       s = "^"; s += name; s += "_(.*)$";
       m_data_re.Reset(s, "o", 1);
+
+      if (name == "EventInfo")
+      {
+         m_data_re.Reset("^(run|luminosityBlock|event)$", "o", 1);
+      }
    }
 
 MamaCollection::~MamaCollection()
@@ -94,6 +99,11 @@ void MamaCollection::goto_event(Long64_t ev)
    {
       m_num_ents_leaf->GetBranch()->GetEntry(ev);
       m_entries = ((UInt_t*)(m_num_ents_leaf->GetValuePointer()))[0];
+   }
+   else
+   {
+      // If not a vector (does not have nClass branch), assume single entry.
+      m_entries = 1;
    }
 
    for (auto &m : m_members)

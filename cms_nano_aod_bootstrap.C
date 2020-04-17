@@ -2,6 +2,9 @@ nanoaod::Event * g_event = nullptr;
 
 void cms_nano_aod_config_event(nanoaod::Event *e)
 {
+   // EventInfo is handled specifically to pick up run / lumi / event ids.
+   e->RegisterMamaCollection("EventInfo");
+
    e->RegisterMamaCollection("Electron");
    e->RegisterMamaCollection("Jet");
    e->RegisterMamaCollection("MET");
