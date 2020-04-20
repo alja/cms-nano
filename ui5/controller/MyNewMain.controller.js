@@ -16,61 +16,57 @@ sap.ui.define(['rootui5/eve7/controller/Main.controller',
          this.mgr.handle.SetReceiver(this);
          //this.mgr.
          console.log("register my controller for init");
-         this.mgr.RegisterController(this);
+     //    this.mgr.RegisterController(this);
       },
 
       OnEveManagerInit: function() {
-	 
+
          MainController.prototype.OnEveManagerInit.apply(this, arguments);
          var world = this.mgr.childs[0].childs;
 
          // this is a prediction that the fireworks GUI is the last element after scenes
          // could loop all the elements in top level and check for typename
          var last = world.length -1;
-         console.log("init gui ", last, world);
 
          if (world[last]._typename == "EventManager") {
             this.fw2gui = (world[last]);
-
-            var pthis = this;
-            this.mgr.UT_refresh_event_info = function() {
-               console.log("jay ", world[last]);
-               pthis.showEventInfo();
-            }
-
-             pthis.showEventInfo();
+            this.showEventInfo();
          }
       },
 
       OnWebsocketMsg : function(handle, msg, offset)
-      { this.mgr.OnWebsocketMsg(handle, msg, offset);
-         if ( typeof msg == "string") {
-             if(this.refreshTitle)
-                this.showEventInfo();
-         }
+      {
+         this.mgr.OnWebsocketMsg(handle, msg, offset);
+      },
+
+
+      sceneElementChange: function(msg) {
+         console.log("ddddddxxxxx sceneElementChange", msg)
       },
 
       showHelp : function(oEvent) {
          alert("=====User support: dummy@cern.ch");
       },
-   showEventInfo : function() {
-         document.title = this.fw2gui.fName +": " + this.fw2gui.fTitle;
-         console.log("document title ", document.title);
-         this.byId("runInput").setValue(this.fw2gui.run);
-         this.byId("lumiInput").setValue(this.fw2gui.lumi);
-         this.byId("eventInput").setValue(this.fw2gui.event);
 
-         this.byId("dateLabel").setText(this.fw2gui.date);
-         this.refreshTitle=false;
+      showEventInfo : function() {
+         // console.log("showEventInfo");
+         let ei = this.fw2gui.fTitle.split("/");
+         var event = ei[0];
+         var nevents = ei[2];
+         var run = ei[2];
+         var lumi = ei[3];
+         document.title = this.fw2gui.fName +": " + event + "/" + nevents;
+
+         this.byId("runInput").setValue(run);
+         this.byId("lumiInput").setValue(lumi);
+         this.byId("eventInput").setValue(event);
       },
 
       nextEvent : function(oEvent) {
-         this.refreshTitle=true;
           this.mgr.SendMIR("NextEvent()", this.fw2gui.fElementId, "EventManager");
       },
 
       prevEvent : function(oEvent) {
-         this.refreshTitle=true;
          this.mgr.SendMIR("PreviousEvent()", this.fw2gui.fElementId, "EventManager");
       },
 

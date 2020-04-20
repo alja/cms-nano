@@ -111,7 +111,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       float phiMin;
       float phiMax;
    };
-      
+
    bool HaveSingleProduct() const override { return true; }
 
    void makeBarrelCell( Cell &cellData, float &offset , float towerH, float *pnts)
@@ -177,7 +177,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       offset += towerH*Sin(cellData.thetaMin);
 
    }// end RenderBarrelCell
-   
+
    void makeEndCapCell(Cell &cellData, float &offset, float towerH , float *pnts)
    {
       using namespace TMath;
@@ -195,7 +195,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       float sin2 = Sin(cellData.phiMin);
       float cos1 = Cos(cellData.phiMax);
       float sin1 = Sin(cellData.phiMax);
-   
+
       // 0
       pnts[0] = r1In*cos1;
       pnts[1] = r1In*sin1;
@@ -245,7 +245,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
 
    } // end makeEndCapCell
 
-   
+
    using REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>::BuildViewType;
    void BuildViewType(const nanoaod::Jet& cdj, int idx, REveElement* iItemHolder,
                  std::string viewType, const REveViewContext* context) override
@@ -260,7 +260,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       nanoaod::Jet& dj = (nanoaod::Jet&)(cdj);
       auto jet = new REveJetCone();
       jet->SetCylinder(context->GetMaxR() -5, context->GetMaxZ());
-      jet->AddEllipticCone(dj.eta(), dj.phi(), 0.2, 0.2);      
+      jet->AddEllipticCone(dj.eta(), dj.phi(), 0.2, 0.2);
       SetupAddElement(jet, iItemHolder, true);
       jet->SetTitle(Form("jet %d", idx));
 
@@ -271,7 +271,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       float  transAngle = abs(atan(r_ecal/z_ecal));
       double theta = EtaToTheta(dj.eta());
       double phi = dj.phi();
-      
+
       Cell cell;
       // hardcoded cell size
       float ad = 0.02;
@@ -286,7 +286,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       std::vector<float> sliceVals;
       sliceVals.push_back( dj.pt() * (1 - dj.chHEF()));
       sliceVals.push_back( dj.pt() * dj.chHEF());
-      
+
       if (theta < transAngle || (3.14-theta) < transAngle)
       {
          // printf("Set points for ENDCAP  REveBox [%d] ======================= \n", idx);
@@ -298,7 +298,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
             reveBox->SetVertices(pnts);
             SetupAddElement(reveBox, iItemHolder, true);
          }
-      }      
+      }
       else
       {
          // printf("Set points for BARREL  REveBox [%d] ======================= \n", idx);
@@ -365,7 +365,7 @@ public:
    }
 
    void RenewEvent()
-   {      
+   {
       for (auto &el: m_collections->RefChildren())
       {
          auto c = dynamic_cast<REveDataCollection *>(el);
@@ -434,7 +434,7 @@ public:
                }
             }
             m_builders.push_back(glBuilder);
-            glBuilder->Build();
+            //glBuilder->Build();
          }
       }
       if (1){
@@ -454,7 +454,7 @@ public:
             if (strncmp(scene->GetCTitle(), "Table", 5) == 0)
             {
                scene->AddElement(tablep);
-               tableBuilder->Build(rdc, tablep, viewContext );
+               //tableBuilder->Build(rdc, tablep, viewContext );
                break;
             }
          }
@@ -509,9 +509,21 @@ public:
    EventManager(CollectionManager* m, nanoaod::Event* e):REveElement("EventManager") {m_collectionMng  = m; m_event = e; }
    virtual ~EventManager() {}
 
+   virtual void GotoEvent(int id)
+   {
+      m_event->GotoEvent(id);
+      UpdateTitle();
+      m_collectionMng->RenewEvent();
+   }
+
+
    void UpdateTitle()
    {
-      SetTitle(Form("%lld/%lld",m_event->GetEvent(), m_event->GetNumEvents() ));
+   nanoaod::MamaCollection& mc = m_event->RefColl("EventInfo");
+   nanoaod::EventInfo ei = mc.get_item_with_class<nanoaod::EventInfo>(0);
+
+      printf("======= update title %lld/%lld \n", m_event->GetEvent(), m_event->GetNumEvents());
+      SetTitle(Form("%lld/%lld/%d/%d",m_event->GetEvent(), m_event->GetNumEvents(), ei.run(), ei.luminosityBlock() ));
       StampObjProps();
    }
    virtual void NextEvent()
@@ -521,9 +533,7 @@ public:
          printf("NextEvent: reached last %lld\n", m_event->GetNumEvents());
          id = 0;
       }
-      m_event->GotoEvent(id);
-      UpdateTitle();
-      m_collectionMng->RenewEvent();
+      GotoEvent(id);
    }
 
    virtual void PreviousEvent()
@@ -538,11 +548,11 @@ public:
       }
 
       printf("going to previous %d \n", id);
-      m_event->GotoEvent(id);
-
-      UpdateTitle();
-      m_collectionMng->RenewEvent();
+      GotoEvent(id);
    }
+
+
+
 
    void SetNanoEvent(nanoaod::Event* e) {m_event = e;}
    nanoaod::Event* GetNanoEvent() {return m_event;}
@@ -628,7 +638,7 @@ void createScenesAndViews()
 void evd(int portNum=9092)
 {
    auto event = g_event;
-   event->GotoEvent(0);
+   // event->GotoEvent(0);
 
    // init REve stuff
    eveMng = REveManager::Create();
@@ -647,16 +657,18 @@ void evd(int portNum=9092)
    collectionMng->addCollection("MET", kGreen, false);
    collectionMng->addCollection("Muon", kRed, false);
 
+   eventMng->GotoEvent(0);
 
-   nanoaod::MamaCollection& mc = event->RefColl("EventInfo");
-   nanoaod::EventInfo ei = mc.get_item_with_class<nanoaod::EventInfo>(0);
-   printf("ffffff run = %d, lumi = %d, event = %llu\n", ei.run(), ei.luminosityBlock(), ei.event() );
+   bool debugClient = false;
+   if (debugClient) {
+      eveMng->GetWorld()->AddCommand("NextEvent", "sap-icon://step", eventMng, "NextEvent()");
+   }
+   else {
+      std::string locPath = "ui5";
+      eveMng->AddLocation("mydir/", locPath);
+      eveMng->SetDefaultHtmlPage("file:mydir/eventDisplay.html");
+   }
 
-   printf("mama eventinfo entries = %d %p event= %llu\n", mc.get_n_entries(),mc.get_item(0),((nanoaod::EventInfo*) mc.get_item(0))->event());
-   
-   std::string locPath = "ui5";
-   eveMng->AddLocation("mydir/", locPath);
-   eveMng->SetDefaultHtmlPage("file:mydir/eventDisplay.html");
 
    gEnv->SetValue("WebEve.DisableShow", 1);
    gEnv->SetValue("WebGui.HttpPort", portNum);

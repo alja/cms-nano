@@ -78,6 +78,9 @@ sap.ui.define(['rootui5/eve7/controller/Summary.controller',
          this.popover.openBy(this.byId("addCollection"));
       },
 
+      endChanges: function() {
+         sap.ui.getCore().byId("__xmlview0").getController().showEventInfo();     
+      },
 
       createTable: function() {
 	 // create some dummy JSON data
