@@ -671,6 +671,7 @@ void evd(int portNum=9092)
 
 
    gEnv->SetValue("WebEve.DisableShow", 1);
+   gEnv->SetValue("WebGui.HttpMaxAge", 0);
    gEnv->SetValue("WebGui.HttpPort", portNum);
    eveMng->Show();
 }
