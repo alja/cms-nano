@@ -14,4 +14,7 @@ Visualization of nanoAod
 
 `make`
 
+
+### Note
+Command line options for data file is not supported. It can be set manuall in cms_nano_aod_bootstrap.C file.
 ![screenshot](https://user-images.githubusercontent.com/2516492/78937920-cebbed80-7aa0-11ea-9ab9-7c8b5cd14957.png)
