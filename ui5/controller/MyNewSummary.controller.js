@@ -29,6 +29,7 @@ sap.ui.define(['rootui5/eve7/controller/Summary.controller',
          this.summaryElements = {};
 
          var src = this.mgr.childs[0].childs[2].childs;
+
          for (var i = 0; i < src.length; i++) {
             if (src[i].fName == "Collections")
                src = src[i].childs;

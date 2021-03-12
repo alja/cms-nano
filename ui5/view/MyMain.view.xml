@@ -10,8 +10,6 @@
      <customHeader>
        <Bar id="otb1" >
          <contentLeft>
-          <Button icon="sap-icon://user-edit" type="Transparent"
-               tooltip="Toggle GED editor" press="toggleGedEditor"/>
             <MenuButton text="File"  enabled="false">
                <menu>
                   <Menu itemSelected="onFileMenuAction">
@@ -35,15 +33,12 @@
                   </Menu>
                </menu>
             </MenuButton>
-            <Button text="Edit" type="Transparent" enabled="false"
-                    ></Button>
-
             <MenuButton text="View" type="Transparent"  enabled="true"
                         visible="true">
               <menu>
                 <Menu itemSelected="onViewMenuActionxxx" id="menuViewId">
                   <items>
-                    <MenuItem text="New Viewer" >
+                    <MenuItem text="New Viewer" enabled="false" >
                       <items>
                         <MenuItem text="3D"  enabled="false"/>
                         <MenuItem text="RhoZ" enabled="false" />
@@ -71,11 +66,6 @@
          <contentMiddle>
                 <FormattedText id="centerTitle" htmlText="CMS Nanoaod"/>
          </contentMiddle>
-         <contentRight>
-           <Image src="mydir/logo-fireworks.png"
-                  class="sapUiSmallMarginEnd" height="100%"/>
-
-         </contentRight>
         </Bar>
      </customHeader>
      <subHeader>
@@ -84,7 +74,7 @@
 
            <Button id="prevEvent" icon="sap-icon://media-reverse"
                    press="prevEvent" />
-           <Button id="nextEvent" icon="sap-icon://media-play"
+           <Button id="nextEvent" icon="sap-icon://media-play" 
                    press="nextEvent" />
 
             <ToolbarSpacer />
