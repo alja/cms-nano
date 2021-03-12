@@ -16,7 +16,11 @@ sap.ui.define(['rootui5/eve7/controller/Main.controller',
          this.mgr.handle.setReceiver(this);
          //this.mgr.
          console.log("register my controller for init");
-     //    this.mgr.RegisterController(this);
+         
+         var elem = this.byId("centerTitle");
+         let title = "<strong>" + elem.getProperty("htmlText")+ "</strong>";
+
+         elem.setHtmlText(title);
       },
 
       onEveManagerInit: function() {
