@@ -1,4 +1,4 @@
-#include "ROOT/REveDataClasses.hxx"
+#include "ROOT/REveDataCollection.hxx"
 #include "ROOT/REveDataSimpleProxyBuilderTemplate.hxx"
 #include "ROOT/REveManager.hxx"
 #include "ROOT/REveScalableStraightLineSet.hxx"
@@ -247,8 +247,8 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
 
 
    using REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>::BuildViewType;
-   void BuildViewType(const nanoaod::Jet& cdj, int idx, REveElement* iItemHolder,
-                 std::string viewType, const REveViewContext* context) override
+  virtual  void BuildViewType(const nanoaod::Jet& cdj, int idx, REveElement* iItemHolder,
+                              const std::string& viewType, const REveViewContext* context) override
    {
 
       printf("REveDataSimpleProxyBuilderTemplate BuildViewType [%s](%d) >>>\n\n\n\n\n", viewType.c_str(), idx);
@@ -263,7 +263,9 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       jet->AddEllipticCone(dj.eta(), dj.phi(), 0.2, 0.2);
       SetupAddElement(jet, iItemHolder, true);
       jet->SetTitle(Form("jet %d", idx));
-
+      printf("make jet %d\n", idx);
+      
+      /*
       static const float_t offr = 5;
       float r_ecal = context->GetMaxR() + offr;
       float z_ecal = context->GetMaxZ() + offr;
@@ -289,7 +291,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
 
       if (theta < transAngle || (3.14-theta) < transAngle)
       {
-         // printf("Set points for ENDCAP  REveBox [%d] ======================= \n", idx);
+          printf("Set points for ENDCAP  REveBox [%d] ======================= \n", idx);
          float offset = TMath::Sign(context->GetMaxZ(), dj.eta());
          for (auto &val : sliceVals) {
             offset +=  TMath::Sign(offr, dj.eta());
@@ -301,7 +303,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       }
       else
       {
-         // printf("Set points for BARREL  REveBox [%d] ======================= \n", idx);
+         printf("Set points for BARREL  REveBox [%d] ======================= \n", idx);
          float offset = context->GetMaxR();
          for (auto &val : sliceVals) {
             offset += offr;
@@ -312,6 +314,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
             reveBox->SetTitle(Form("jet %d", idx)); // amt this is workaround and should be unnecessary
          }
       }
+      */
    }
 
 
@@ -341,27 +344,28 @@ private:
 
    std::vector<REveDataProxyBuilderBase *> m_builders;
 
+   bool m_isEventLoading{false}; // don't process model changes when applying filter on new event
 public:
    CollectionManager(nanoaod::Event* event) : m_event(event)
    {
        m_collections = eveMng->GetScenes()->FindChild("Collections");
-       //      m_collections = eveMng->SpawnNewScene("Collections", "Collections");
    }
 
 
    void LoadCurrentEventInCollection(REveDataCollection* rdc)
    {
+      m_isEventLoading = true;
       rdc->ClearItems();
-      rdc->DestroyElements();
       nanoaod::MamaCollection& mc = m_event->RefColl(rdc->GetCName());
       std::string cname = rdc->GetName();
-      //printf("-------- LoadCurrentEventInCollection size %d\n",mc.get_n_entries() );
+      printf("-------- LoadCurrentEventInCollection %s size %d\n", rdc->GetCName(), mc.get_n_entries() );
       for (int i = 0; i < mc.get_n_entries(); ++i)
       {
          TString pname(Form("%s %2d",  cname.c_str(), i));
-         // printf("access item %d \n", i);
          rdc->AddItem(mc.get_item(i), pname.Data(), "");
       }
+      rdc->ApplyFilter();
+      m_isEventLoading = false;
    }
 
    void RenewEvent()
@@ -378,118 +382,110 @@ public:
       }
 
    }
-   REveDataProxyBuilderBase* makeGLBuilderForType(TClass* c)
-   {
-      // AMT can we do this with gRoot->ProcessLine() instead
-      std::string cname = c->GetName();
-      if (cname == "nanoaod::Jet")
-      {
-          return new JetProxyBuilder();
-      }
-      else if (cname == "nanoaod::Electron")
-      {
-          return new ElectronProxyBuilder();
-      }
-      else if (cname == "nanoaod::Muon")
-      {
-          return new MuonProxyBuilder();
-      }
-      else
-      {
-         return nullptr;
-      }
-   }
 
-   REveDataCollection*  addCollection(std::string name, Color_t ccol = kBlue, bool showInTable=false)
+   void addCollection(REveDataCollection* collection, REveDataProxyBuilderBase* glBuilder)
    {
-      nanoaod::MamaCollection& mc = m_event->RefColl(name);
-      auto rdc = new REveDataCollection (mc.get_class_name());
-      rdc->SetItemClass(mc.get_item_class());
-      rdc->SetMainColor(ccol);
-      m_collections->AddElement(rdc);
-      LoadCurrentEventInCollection(rdc);
+      m_collections->AddElement(collection);
+      nanoaod::MamaCollection& mc = m_event->RefColl(collection->GetCName());
+      //  auto rdc = new REveDataCollection (mc.get_class_name());
+      std::cout << "class    !!!" << mc.get_class_name() << std::endl;
+      collection->SetItemClass(mc.get_item_class());
+ 
+      // load data
+      LoadCurrentEventInCollection(collection);
+      glBuilder->SetCollection(collection);
+      glBuilder->SetHaveAWindow(true);
 
-      if (1) {
-         // GL view types
-         auto glBuilder = makeGLBuilderForType(rdc->GetItemClass());
-         if (glBuilder)
+      for (auto &scene: eveMng->GetScenes()->RefChildren())
+      {
+         
+         REveElement *product = glBuilder->CreateProduct(scene->GetTitle(), viewContext);
+
+         if (strncmp(scene->GetCName(), "Table", 5) == 0) continue;
+         if (!strncmp(scene->GetCTitle(), "RhoZProjected", 8))
          {
-            glBuilder->SetCollection(rdc);
-            glBuilder->SetHaveAWindow(true);
-            for (auto &scene: eveMng->GetScenes()->RefChildren())
-            {
-
-               if (strncmp(scene->GetCTitle(), "Table", 5) == 0) continue;
-
-               if (!strncmp(scene->GetCTitle(), "RhoZProjected", 8))
-               {
-                  REveElement *product = glBuilder->CreateProduct("RhoZViewType", viewContext);
-                  mngRhoZ->ImportElements(product, scene);
-                  continue;
-               }
-               else if ((!strncmp(scene->GetCName(), "Event scene", 8)))
-               {
-                  REveElement *product = glBuilder->CreateProduct(scene->GetTitle(), viewContext);
-                  scene->AddElement(product);
-               }
-            }
-            m_builders.push_back(glBuilder);
-            //glBuilder->Build();
+            REveElement *product = glBuilder->CreateProduct("RhoZViewType", viewContext);
+            mngRhoZ->ImportElements(product, scene);
+            continue;
+         }
+         else if ((!strncmp(scene->GetCName(), "Event scene", 8)))
+         {
+            REveElement *product = glBuilder->CreateProduct(scene->GetTitle(), viewContext);
+            scene->AddElement(product);
          }
       }
-      if (1){
-         // Table view types
-         auto tableBuilder = new REveTableProxyBuilder();
-         tableBuilder->SetHaveAWindow(true);
-         tableBuilder->SetCollection(rdc);
-         REveElement* tablep = tableBuilder->CreateProduct("table-type", viewContext);
-         auto tableMng =  viewContext->GetTableViewInfo();
-         if (showInTable)
-         {
-            tableMng->SetDisplayedCollection(rdc->GetElementId());
-         }
-         tableMng->AddDelegate([=]() { tableBuilder->ConfigChanged(); });
-         for (auto &scene: eveMng->GetScenes()->RefChildren())
-         {
-            if (strncmp(scene->GetCTitle(), "Table", 5) == 0)
-            {
-               scene->AddElement(tablep);
-               //tableBuilder->Build(rdc, tablep, viewContext );
-               break;
-            }
-         }
-         m_builders.push_back(tableBuilder);
-      }
-      rdc->SetHandlerFunc([&] (REveDataCollection* rdc)
-                          {
-                             this->CollectionChanged( rdc );
-                          });
+      m_builders.push_back(glBuilder);
+      glBuilder->Build();
 
-      rdc->SetHandlerFuncIds([&] (REveDataCollection* rdc, const REveDataCollection::Ids_t& ids)
-                             {
-                                this->ModelChanged( rdc, ids );
-                             });
-
-      return rdc;
-   }
-
-
-   void CollectionChanged(REveDataCollection* collection)
-   {
-      printf("collection changes not implemented %s!\n", collection->GetCName());
-   }
-
-   void ModelChanged(REveDataCollection* collection, const REveDataCollection::Ids_t& ids)
-   {
-      for (auto proxy : m_builders)
+      // Tables
+      auto tableBuilder = new REveTableProxyBuilder();
+      tableBuilder->SetHaveAWindow(true);
+      tableBuilder->SetCollection(collection);
+      REveElement* tablep = tableBuilder->CreateProduct("table-type", viewContext);
+      auto tableMng =  viewContext->GetTableViewInfo();
+      if (collection == m_collections->FirstChild())
       {
-         if (proxy->Collection() == collection)
+         tableMng->SetDisplayedCollection(collection->GetElementId());
+      }
+
+      for (auto &scene: eveMng->GetScenes()->RefChildren())
+      {
+         if (strncmp(scene->GetCTitle(), "Table", 5) == 0)
          {
-            // printf("Model changes check proxy %s: \n", proxy->Type().c_str());
+            scene->AddElement(tablep);
+            //tableBuilder->Build(rdc, tablep, viewContext );
+            break;
+         }
+      }
+      tableMng->AddDelegate([=]() { tableBuilder->ConfigChanged(); });
+      m_builders.push_back(tableBuilder);
+
+
+      // set tooltip expression for items
+      
+      auto tableEntries =  tableMng->RefTableEntries(collection->GetItemClass()->GetName());
+      int N  = TMath::Min(int(tableEntries.size()), 3);
+      for (int t = 0; t < N; t++) {
+         auto te = tableEntries[t];
+         collection->GetItemList()->AddTooltipExpression(te.fName, te.fExpression);
+      }
+      
+      collection->GetItemList()->SetItemsChangeDelegate([&] (REveDataItemList* collection, const REveDataCollection::Ids_t& ids)
+      {
+         this->ModelChanged( collection, ids );
+      });
+      collection->GetItemList()->SetFillImpliedSelectedDelegate([&] (REveDataItemList* collection, REveElement::Set_t& impSelSet)
+      {
+         this->FillImpliedSelected( collection,  impSelSet);
+      });
+   }
+
+   void ModelChanged(REveDataItemList* itemList, const REveDataCollection::Ids_t& ids)
+   {
+      if (m_isEventLoading) return;
+      
+       for (auto proxy : m_builders)
+      {
+         if (proxy->Collection()->GetItemList() == itemList)
+         {
+            printf("Model changes check proxy %s: \n", proxy->Collection()->GetCName());
             proxy->ModelChanges(ids);
          }
       }
    }
+
+   void FillImpliedSelected(REveDataItemList* itemList, REveElement::Set_t& impSelSet)
+   {
+
+      for (auto proxy : m_builders)
+      {
+         if (proxy->Collection()->GetItemList() == itemList)
+         {
+            proxy->FillImpliedSelected(impSelSet);
+         }
+      }
+   }
+
 };
 
 
@@ -516,11 +512,11 @@ public:
       m_collectionMng->RenewEvent();
    }
 
-
-   void UpdateTitle()
+ 
+  void UpdateTitle()
    {
-   nanoaod::MamaCollection& mc = m_event->RefColl("EventInfo");
-   nanoaod::EventInfo ei = mc.get_item_with_class<nanoaod::EventInfo>(0);
+      nanoaod::MamaCollection& mc = m_event->RefColl("EventInfo");
+      nanoaod::EventInfo ei = mc.get_item_with_class<nanoaod::EventInfo>(0);
 
       printf("======= update title %lld/%lld \n", m_event->GetEvent(), m_event->GetNumEvents());
       SetTitle(Form("%lld/%lld/%d/%d",m_event->GetEvent(), m_event->GetNumEvents(), ei.run(), ei.luminosityBlock() ));
@@ -599,11 +595,14 @@ void createScenesAndViews()
       column("pt",  1, "i.pt()").
       column("eta", 3, "i.eta()").
       column("phi", 3, "i.phi()");
+   
+   tableInfo->table("nanoaod::MET").
+      column("pt",  1, "i.pt()");
 
 
    viewContext->SetTableViewInfo(tableInfo);
 
-   // Geometry
+   // Geom  ry
    auto b1 = new REveGeoShape("Barrel 1");
    float dr = 3;
    b1->SetShape(new TGeoTube(r -2 , r+2, z));
@@ -638,7 +637,7 @@ void createScenesAndViews()
 void evd(int portNum=9092)
 {
    auto event = g_event;
-   // event->GotoEvent(0);
+   event->GotoEvent(0);
 
    // init REve stuff
    eveMng = REveManager::Create();
@@ -650,24 +649,28 @@ void evd(int portNum=9092)
    eventMng->SetName(event->GetFile()->GetName());
    eveMng->GetWorld()->AddElement(eventMng);
 
-   // test collections
-   auto rdc = collectionMng->addCollection("Jet", kBlue, true);
-   //   rdc->SetFilterExpr("i.pt() > 25");
-   collectionMng->addCollection("Electron", kOrange + 7, false);
-   collectionMng->addCollection("MET", kGreen, false);
-   collectionMng->addCollection("Muon", kRed, false);
+   REveDataCollection* jetCollection = new REveDataCollection("Jet");
+   jetCollection->SetMainColor(kYellow);
+   collectionMng->addCollection(jetCollection, new JetProxyBuilder());
 
+   jetCollection->SetFilterExpr("i.pt() > 25");
+   
+     REveDataCollection* muCollection = new REveDataCollection("Muon");
+   muCollection->SetMainColor(kRed);
+   collectionMng->addCollection(muCollection, new MuonProxyBuilder());
+   
+   REveDataCollection* elCollection = new REveDataCollection("Electron");
+   collectionMng->addCollection(elCollection, new ElectronProxyBuilder());
+
+
+
+     
    eventMng->GotoEvent(0);
 
-   bool debugClient = false;
-   if (debugClient) {
-      eveMng->GetWorld()->AddCommand("NextEvent", "sap-icon://step", eventMng, "NextEvent()");
-   }
-   else {
       std::string locPath = "ui5";
       eveMng->AddLocation("mydir/", locPath);
       eveMng->SetDefaultHtmlPage("file:mydir/eventDisplay.html");
-   }
+
 
 
    gEnv->SetValue("WebEve.DisableShow", 1);
