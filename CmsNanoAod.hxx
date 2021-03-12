@@ -3,6 +3,7 @@
 #include "TLeaf.h"
 
 #include <functional>
+#include <map>
 
 class TTree;
 class TFile;
@@ -13,7 +14,6 @@ class TFile;
 #pragma link C++ class nanoaod::MamaCollection-!;
 #pragma link C++ class nanoaod::Event-!;
 #endif
-
 namespace nanoaod
 {
 
