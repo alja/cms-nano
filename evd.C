@@ -47,37 +47,36 @@ float EtaToTheta(float eta)
 
 class ElectronProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::Electron>
 {
-   using REveDataSimpleProxyBuilderTemplate<nanoaod::Electron>::Build;
-   void Build(const nanoaod::Electron& c_electron, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
+   using REveDataSimpleProxyBuilderTemplate<nanoaod::Electron>::BuildItem;
+   void BuildItem(const nanoaod::Electron& c_electron, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
    {
-
       nanoaod::Electron& electron = (nanoaod::Electron&)(c_electron);
       int pdg = 11 * electron.charge();
 
       float theta = EtaToTheta(electron.eta());
       float phi = electron.phi();
-      float p = electron.pt()/TMath::Sin(theta);
+      float p = electron.pt() / TMath::Sin(theta);
       float px = p * TMath::Cos(theta) * TMath::Cos(phi);
       float py = p * TMath::Cos(theta) * TMath::Sin(phi);
       float pz = p * TMath::Sin(theta);
       float etot = p; // ???
-         auto x = new TParticle(pdg, 0, 0, 0, 0, 0,
-                                       px, py, pz,  p,
-                                       0, 0, 0, 0 );
+      auto x = new TParticle(pdg, 0, 0, 0, 0, 0,
+                             px, py, pz, p,
+                             0, 0, 0, 0);
 
       // printf("==============  BUILD track %s (pt=%f, eta=%f) \n", iItemHolder->GetCName(), p.Pt(), p.Eta());
-      auto track = new REveTrack((TParticle*)(x), 1, context->GetPropagator());
+      auto track = new REveTrack((TParticle *)(x), 1, context->GetPropagator());
       track->MakeTrack();
       SetupAddElement(track, iItemHolder, true);
       // iItemHolder->AddElement(track);
-      //track->SetName(Form("element %s id=%d", iItemHolder->GetCName(), track->GetElementId()));
+      // track->SetName(Form("element %s id=%d", iItemHolder->GetCName(), track->GetElementId()));
    }
 };
 
 class MuonProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::Muon>
 {
-   using REveDataSimpleProxyBuilderTemplate<nanoaod::Muon>::Build;
-   void Build(const nanoaod::Muon& c_electron, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
+   using REveDataSimpleProxyBuilderTemplate<nanoaod::Muon>::BuildItem;
+   void BuildItem(const nanoaod::Muon& c_electron, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
    {
 
       nanoaod::Muon& electron = (nanoaod::Muon&)(c_electron);
@@ -98,8 +97,6 @@ class MuonProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::Muon
       auto track = new REveTrack((TParticle*)(x), 1, muonPropagator_g);
       track->MakeTrack();
       SetupAddElement(track, iItemHolder, true);
-      // iItemHolder->AddElement(track);
-      // track->SetName(Form("element %s id=%d", iItemHolder->GetCName(), track->GetElementId()));
    }
 };
 
@@ -112,7 +109,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       float phiMax;
    };
 
-   bool HaveSingleProduct() const override { return true; }
+   bool HaveSingleProduct() const override { return false; }
 
    void makeBarrelCell( Cell &cellData, float &offset , float towerH, float *pnts)
    {
@@ -246,16 +243,9 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
    } // end makeEndCapCell
 
 
-   using REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>::BuildViewType;
-  virtual  void BuildViewType(const nanoaod::Jet& cdj, int idx, REveElement* iItemHolder,
-                              const std::string& viewType, const REveViewContext* context) override
-   {
-
-      printf("REveDataSimpleProxyBuilderTemplate BuildViewType [%s](%d) >>>\n\n\n\n\n", viewType.c_str(), idx);
-   }
-
-   void Build(const nanoaod::Jet& cdj, int idx, REveElement* iItemHolder,
-                const REveViewContext* context) override
+   using REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>::BuildItemViewType;
+   void BuildItemViewType(const nanoaod::Jet& cdj, int idx, REveElement* iItemHolder,
+                      const std::string& viewType, const REveViewContext* context) override
    {
       nanoaod::Jet& dj = (nanoaod::Jet&)(cdj);
       auto jet = new REveJetCone();
@@ -265,7 +255,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       jet->SetTitle(Form("jet %d", idx));
       printf("make jet %d\n", idx);
       
-      /*
+      
       static const float_t offr = 5;
       float r_ecal = context->GetMaxR() + offr;
       float z_ecal = context->GetMaxZ() + offr;
@@ -314,7 +304,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
             reveBox->SetTitle(Form("jet %d", idx)); // amt this is workaround and should be unnecessary
          }
       }
-      */
+      
    }
 
 
@@ -454,10 +444,10 @@ public:
       {
          this->ModelChanged( collection, ids );
       });
-      collection->GetItemList()->SetFillImpliedSelectedDelegate([&] (REveDataItemList* collection, REveElement::Set_t& impSelSet)
-      {
-         this->FillImpliedSelected( collection,  impSelSet);
-      });
+      collection->GetItemList()->SetFillImpliedSelectedDelegate([&] (REveDataItemList* collection, REveElement::Set_t& impSelSet, const std::set<int>& sec_idcs)
+                                    {
+                                       this->FillImpliedSelected( collection,  impSelSet, sec_idcs);
+                                    });
    }
 
    void ModelChanged(REveDataItemList* itemList, const REveDataCollection::Ids_t& ids)
@@ -473,15 +463,14 @@ public:
          }
       }
    }
-
-   void FillImpliedSelected(REveDataItemList* itemList, REveElement::Set_t& impSelSet)
+   void FillImpliedSelected(REveDataItemList* itemList, REveElement::Set_t& impSelSet, const std::set<int>& sec_idcs)
    {
 
       for (auto proxy : m_builders)
       {
          if (proxy->Collection()->GetItemList() == itemList)
          {
-            proxy->FillImpliedSelected(impSelSet);
+            proxy->FillImpliedSelected(impSelSet, sec_idcs);
          }
       }
    }
@@ -615,6 +604,7 @@ void createScenesAndViews()
       mngRhoZ = new REveProjectionManager(REveProjection::kPT_RhoZ);
       mngRhoZ->SetImportEmpty(true);
       auto rhoZView = eveMng->SpawnNewViewer("RhoZ View");
+   rhoZView->SetCameraType(REveViewer::kCameraOrthoXOY);
       rhoZView->AddScene(rhoZEventScene);
 
       auto pgeoScene = eveMng->SpawnNewScene("Projection Geometry");
@@ -649,29 +639,24 @@ void evd(int portNum=9092)
    eventMng->SetName(event->GetFile()->GetName());
    eveMng->GetWorld()->AddElement(eventMng);
 
-   REveDataCollection* jetCollection = new REveDataCollection("Jet");
+   REveDataCollection *jetCollection = new REveDataCollection("Jet");
    jetCollection->SetMainColor(kYellow);
    collectionMng->addCollection(jetCollection, new JetProxyBuilder());
 
    jetCollection->SetFilterExpr("i.pt() > 25");
-   
-     REveDataCollection* muCollection = new REveDataCollection("Muon");
+
+   REveDataCollection *muCollection = new REveDataCollection("Muon");
    muCollection->SetMainColor(kRed);
    collectionMng->addCollection(muCollection, new MuonProxyBuilder());
-   
-   REveDataCollection* elCollection = new REveDataCollection("Electron");
+
+   REveDataCollection *elCollection = new REveDataCollection("Electron");
    collectionMng->addCollection(elCollection, new ElectronProxyBuilder());
 
-
-
-     
    eventMng->GotoEvent(0);
 
-      std::string locPath = "ui5";
-      eveMng->AddLocation("mydir/", locPath);
-      eveMng->SetDefaultHtmlPage("file:mydir/eventDisplay.html");
-
-
+   std::string locPath = "ui5";
+   eveMng->AddLocation("mydir/", locPath);
+   eveMng->SetDefaultHtmlPage("file:mydir/eventDisplay.html");
 
    gEnv->SetValue("WebEve.DisableShow", 1);
    gEnv->SetValue("WebGui.HttpMaxAge", 0);
