@@ -41,16 +41,16 @@ Float_t EtaToTheta(Float_t eta)
       return 2*ATan(Exp(- Abs(eta)));
 }
 
-/*
+
 
 class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
 {
    bool HaveSingleProduct() const override { return false; }
 
-   using REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>::BuildViewType;
+   using REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>::BuildItemViewType;
 
-   void BuildViewType(const nanoaod::Jet& cdj, int idx, REveElement* iItemHolder,
-                      std::string viewType, const REveViewContext* context) override
+   void BuildItemViewType(const nanoaod::Jet& cdj, int idx, REveElement* iItemHolder,
+                      const std::string& viewType, const REveViewContext* context) override
    {
 
       //hack ...
@@ -113,7 +113,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
       cone->SetLineColor(cone->GetMainColor());
    }
 };
-*/
+
 
 
 //==============================================================================
@@ -129,7 +129,8 @@ private:
    nanoaod::Event             *m_event{nullptr};
    REveElement               *m_collections{nullptr};
 
-   std::vector<REveDataProxyBuilderBase *> m_builders;
+   std::vector<REveDataProxyBuilderBase *> m_builders; 
+   bool m_isEventLoading{false}; // don't process model changes when applying filter on new event
 
 public:
    CollectionManager(nanoaod::Event* event) : m_event(event)
@@ -141,12 +142,13 @@ public:
 
    void LoadCurrentEventInCollection(REveDataCollection* rdc)
    {      
-      rdc->ClearItems();
-      rdc->DestroyElements();
+        m_isEventLoading = true;
+        rdc->ClearItems();
+        //VsdCollection *vsdc = m_event->RefColl(rdc->GetName());
+
 
       auto &mc = m_event->RefColl(rdc->GetCName());      
       std::string cname = rdc->GetName();
-
       printf("-------- LoadCurrentEventInCollection %s size %d\n", cname.c_str(), mc.get_n_entries() );
       for (int i = 0; i < mc.get_n_entries(); ++i)
       {
@@ -154,6 +156,10 @@ public:
          printf("access item %d \n", i);
          rdc->AddItem(mc.get_item(i), pname.Data(), "");
       }
+        rdc->ApplyFilter();
+        rdc->GetItemList()->StampObjProps();
+
+        m_isEventLoading = false;
    }
 
    void RenewEvent()
@@ -170,80 +176,124 @@ public:
       }
 
    }
-   /*
+   
    REveDataProxyBuilderBase* makeGLBuilderForType(TClass* c)
    {
       return new JetProxyBuilder();  
    }
-   */
    
+   
+
+    void ModelChanged(REveDataItemList *itemList, const REveDataCollection::Ids_t &ids)
+    {
+       if (m_isEventLoading)
+            return;
+
+        for (auto proxy : m_builders)
+        {
+            if (proxy->Collection()->GetItemList() == itemList)
+            {
+                printf("Model changes check proxy %s: \n", proxy->Collection()->GetCName());
+                proxy->ModelChanges(ids);
+            }
+        }
+    }
+
+    void FillImpliedSelected(REveDataItemList *itemList, REveElement::Set_t &impSelSet, const std::set<int> &sec_idcs)
+    {
+
+        for (auto proxy : m_builders)
+        {
+            if (proxy->Collection()->GetItemList() == itemList)
+            {
+                proxy->FillImpliedSelected(impSelSet, sec_idcs);
+            }
+        }
+    }
    void  addCollection(std::string name, bool showInTable=false)
    {
       auto& mama_col = m_event->RefColl(name);
-      auto  rdc = new REveDataCollection (mama_col.get_class_name());
-      rdc->SetItemClass(mama_col.get_item_class());
-      m_collections->AddElement(rdc);
-      LoadCurrentEventInCollection(rdc);
+      auto  collection = new REveDataCollection (mama_col.get_class_name());
+      collection->SetItemClass(mama_col.get_item_class());
+      m_collections->AddElement(collection);
+      LoadCurrentEventInCollection(collection);
 
       printf("add collection instant proxy builders\n");
 
-      /*
+      
       if (1) {
          // GL view types
-         auto glBuilder = makeGLBuilderForType(rdc->GetItemClass());
-         glBuilder->SetCollection(rdc);
+         auto glBuilder = makeGLBuilderForType(collection->GetItemClass());
+         glBuilder->SetCollection(collection);
          glBuilder->SetHaveAWindow(true);
          for (auto &scene: eveMng->GetScenes()->RefChildren())
          {
-            REveElement *product = glBuilder->CreateProduct(scene->GetTitle(), viewContext);
-
-            if (strncmp(scene->GetCTitle(), "Table", 5) == 0) continue;
-
-            if (!strncmp(scene->GetCTitle(), "Projected", 8))
+            if (strncmp(scene->GetCName(), "Table", 5) == 0)
+                continue;
+            if (!strncmp(scene->GetCTitle(), "RhoZProjected", 8))
             {
-               mngRhoZ->ImportElements(product, scene);
-               continue;
+                REveElement *product = glBuilder->CreateProduct("RhoZViewType", viewContext);
+                mngRhoZ->ImportElements(product, scene);
+                continue;
             }
+            /*
+            if (!strncmp(scene->GetCTitle(), "RPhiProjected", 8))
+            {
+                REveElement *product = glBuilder->CreateProduct("RPhiViewType", viewContext);
+                mngRPhi->ImportElements(product, scene);
+                continue;
+            }*/
             else if ((!strncmp(scene->GetCName(), "Event scene", 8)))
             {
-               scene->AddElement(product);
+                REveElement *product = glBuilder->CreateProduct(scene->GetTitle(), viewContext);
+                scene->AddElement(product);
             }
          }
-         m_builders.push_back(glBuilder);
-         printf("Build GL !!!!! stART\n");
-         glBuilder->Build();
-         printf("Build GL !!!!! END\n");
-      }
+      } 
+      
+      // Tables
+        auto tableBuilder = new REveTableProxyBuilder();
+        tableBuilder->SetHaveAWindow(true);
+        tableBuilder->SetCollection(collection);
+        REveElement *tablep = tableBuilder->CreateProduct("table-type", viewContext);
+        auto tableMng = viewContext->GetTableViewInfo();
+        if (collection == m_collections->FirstChild())
+        {
+            tableMng->SetDisplayedCollection(collection->GetElementId());
+        }
 
-      if (0){
-      
-         printf("Build Table !!!!! \n");
-      
-         // Table view types
-         auto tableBuilder = new REveTableProxyBuilder();
-         tableBuilder->SetHaveAWindow(true);
-         tableBuilder->SetCollection(rdc);
-         REveElement* tablep = tableBuilder->CreateProduct("table-type", viewContext);
-         auto tableMng =  viewContext->GetTableViewInfo();
-         if (showInTable)
-         {
-            tableMng->SetDisplayedCollection(rdc->GetElementId());
-         }
-         tableMng->AddDelegate([=]() { tableBuilder->ConfigChanged(); });
-         for (auto &scene: eveMng->GetScenes()->RefChildren())
-         {
-            printf("COMPARE %s %s\n", scene->GetCTitle(), scene->GetCName());
+        for (auto &scene : eveMng->GetScenes()->RefChildren())
+        {
             if (strncmp(scene->GetCTitle(), "Table", 5) == 0)
             {
-               scene->AddElement(tablep);
-               tableBuilder->Build(rdc, tablep, viewContext );
-               printf("build table view");
-               break;
+                scene->AddElement(tablep);
+                // tableBuilder->Build(rdc, tablep, viewContext );
+                break;
             }
-         }
-         m_builders.push_back(tableBuilder);
-      }
-      */
+        }
+        tableMng->AddDelegate([=]()
+                              { tableBuilder->ConfigChanged(); });
+        m_builders.push_back(tableBuilder);
+
+        // set tooltip expression for items
+
+        auto tableEntries = tableMng->RefTableEntries(collection->GetItemClass()->GetName());
+        int N = TMath::Min(int(tableEntries.size()), 3);
+        for (int t = 0; t < N; t++)
+        {
+            auto te = tableEntries[t];
+            collection->GetItemList()->AddTooltipExpression(te.fName, te.fExpression);
+        }
+
+       // collection->setGLBuilder(glBuilder);
+
+        collection->GetItemList()->SetItemsChangeDelegate([&](REveDataItemList *collection, const REveDataCollection::Ids_t &ids)
+                                                          { this->ModelChanged(collection, ids); });
+        collection->GetItemList()->SetFillImpliedSelectedDelegate([&](REveDataItemList *collection, REveElement::Set_t &impSelSet, const std::set<int> &sec_idcs)
+                                                                  { this->FillImpliedSelected(collection, impSelSet, sec_idcs); });
+    
+
+      
       /*
       rdc->SetHandlerFunc([&] (REveDataCollection* rdc)
                           {
@@ -263,19 +313,7 @@ public:
       printf("collection changes not implemented %s!\n", collection->GetCName());
    }
 
-   void ModelChanged(REveDataCollection* collection, const REveDataCollection::Ids_t& ids)
-   {
-      /*
-      for (auto proxy : m_builders)
-      {
-         if (proxy->Collection() == collection)
-         {
-            // printf("Model changes check proxy %s: \n", proxy->Type().c_str());
-            proxy->ModelChanges(ids);
-         }
-      }
-      */
-   }
+ 
 };
 
 
@@ -388,6 +426,7 @@ void evd()
 
    // init REve stuff
    eveMng = REveManager::Create();
+   eveMng->AllowMultipleRemoteConnections(false, false);
    createScenesAndViews();
    auto collectionMng = new CollectionManager(event);
    
