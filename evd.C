@@ -631,6 +631,7 @@ void evd(int portNum=9092)
 
    // init REve stuff
    eveMng = REveManager::Create();
+   eveMng->AllowMultipleRemoteConnections(false, false);
    createScenesAndViews();
    auto collectionMng = new CollectionManager(event);
 
