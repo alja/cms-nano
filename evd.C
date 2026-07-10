@@ -321,6 +321,100 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
 
 //==============================================================================
 
+class METProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::MET>
+{
+public:
+   virtual bool HaveSingleProduct() const override { return false; }
+
+   using REveDataSimpleProxyBuilderTemplate<nanoaod::MET>::BuildItemViewType;
+   virtual void BuildItemViewType(const nanoaod::MET &c_met, int /*idx*/, ROOT::Experimental::REveElement *iItemHolder,
+                                  const std::string &viewType, const REveViewContext *context) override
+   {
+       nanoaod::MET& met = (nanoaod::MET&)(c_met);
+      using namespace TMath;
+      double phi = met.phi();
+     // double theta = 1;//EtaToTheta(met.eta());
+      double theta = TMath::Pi()/2;
+      double size = 1.f;
+
+      REveScalableStraightLineSet *marker = new REveScalableStraightLineSet("MET marker");
+      marker->SetLineWidth(2);
+      marker->SetAlwaysSecSelect(false);
+
+      SetupAddElement(marker, iItemHolder);
+
+      float offr = 5;
+      float r_ecal = context->GetMaxR() + offr;
+      float z_ecal = context->GetMaxZ() + offr;
+      float energyScale = 5.f;
+
+      if (viewType.compare(0, 3, "Rho") == 0)
+      {
+         // body
+         double r0 = r_ecal;
+         //if (TMath::Abs(met.eta()) < abs(atan(r_ecal / z_ecal)))
+         /*
+         if (true)
+         {
+            r0 = r_ecal / sin(theta);
+         }
+         else
+         {
+            r0 = z_ecal / fabs(cos(theta));
+         }*/
+         marker->SetScaleCenter(0., Sign(r0 * sin(theta), phi), r0 * cos(theta));
+         double r1 = r0 + 1;
+         marker->AddLine(0., Sign(r0 * sin(theta), phi), r0 * cos(theta),
+                         0., Sign(r1 * sin(theta), phi), r1 * cos(theta));
+         // arrow pointer
+         double r2 = r1 - 0.1;
+         double dy = 0.05 * size;
+         marker->AddLine(0., Sign(r2 * sin(theta) + dy * cos(theta), phi), r2 * cos(theta) - dy * sin(theta),
+                         0., Sign(r1 * sin(theta), phi), r1 * cos(theta));
+         dy = -dy;
+         marker->AddLine(0., Sign(r2 * sin(theta) + dy * cos(theta), phi), r2 * cos(theta) - dy * sin(theta),
+                         0., Sign(r1 * sin(theta), phi), r1 * cos(theta));
+
+         // segment
+         /*
+         addRhoZEnergyProjection(this, iItemHolder, r_ecal - 1, z_ecal - 1,
+                                 theta - 0.04, theta + 0.04,
+                                 phi);*/
+      }
+      else
+      {
+         // body
+         double r0 = r_ecal;
+         double r1 = r0 + 1;
+         marker->SetScaleCenter(r0 * cos(phi), r0 * sin(phi), 0);
+         marker->AddLine(r0 * cos(phi), r0 * sin(phi), 0,
+                         r1 * cos(phi), r1 * sin(phi), 0);
+
+         // arrow pointer, xy  rotate offset point ..
+         double r2 = r1 - 0.1;
+         double dy = 0.05 * size;
+
+         marker->AddLine(r2 * cos(phi) - dy * sin(phi), r2 * sin(phi) + dy * cos(phi), 0,
+                         r1 * cos(phi), r1 * sin(phi), 0);
+         dy = -dy;
+         marker->AddLine(r2 * cos(phi) - dy * sin(phi), r2 * sin(phi) + dy * cos(phi), 0,
+                         r1 * cos(phi), r1 * sin(phi), 0);
+
+         // segment
+         double min_phi = phi - M_PI / 36 / 2;
+         double max_phi = phi + M_PI / 36 / 2;
+         REveGeoManagerHolder gmgr(REveGeoShape::GetGeoManager());
+         //REveGeoShape *element = getShape("spread", new TGeoTubeSeg(r0 - 2, r0, 1, min_phi * 180 / M_PI, max_phi * 180 / M_PI), 0);
+         //element->SetPickable(kTRUE);
+         //element->SetMainTransparency(90);
+         //xsSetupAddElement(element, iItemHolder);
+      }
+      // float value = met.et();
+      float value = met.pt();
+      marker->SetScale(energyScale * value);
+   }
+};
+
 //==============================================================================
 
 //==============================================================================
@@ -652,6 +746,9 @@ void evd(int portNum=9092)
 
    REveDataCollection *elCollection = new REveDataCollection("Electron");
    collectionMng->addCollection(elCollection, new ElectronProxyBuilder());
+
+   REveDataCollection *lCollection = new REveDataCollection("MET");
+   collectionMng->addCollection(lCollection, new METProxyBuilder());
 
    eventMng->GotoEvent(0);
 
