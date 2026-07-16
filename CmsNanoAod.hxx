@@ -1,3 +1,6 @@
+#ifndef CMS_NANO_AOD_H
+#define CMS_NANO_AOD_H
+
 #include "TPRegexp.h"
 
 #include "TLeaf.h"
@@ -8,12 +11,6 @@
 class TTree;
 class TFile;
 
-
-#ifdef __ROOTCLING__
-#pragma link C++ class nanoaod::DataMember-!;
-#pragma link C++ class nanoaod::MamaCollection-!;
-#pragma link C++ class nanoaod::Event-!;
-#endif
 namespace nanoaod
 {
 
@@ -112,6 +109,7 @@ class Event
    bool consider_leaf(TLeaf *l);
 
    void autogen_nano_classes();
+   void autogen_linkdef();
 
 public:
    Event();
@@ -120,6 +118,8 @@ public:
    void RegisterMamaCollection(const std::string& coll_name);
 
    void OpenFileAndUseTree(const std::string& file_name, const std::string& tree_name="Events");
+
+   void LoadFile(const std::string& file_name, const std::string& tree_name="Events");
    void UseTree(TTree *tree);
    void CloseFile();
 
@@ -141,3 +141,6 @@ public:
 };
 
 } // end namespace nanoaod
+
+
+#endif

@@ -152,10 +152,27 @@ bool Event::consider_leaf(TLeaf *l)
    return false;
 }
 
+void Event::autogen_linkdef()
+{
+
+   FILE *fp = fopen("EvdNanoClassesLinkDef.h", "w");
+   for (auto& mc : m_mama_colls)
+   {
+      const char *cn = mc.get_class_name().c_str();
+      fprintf(fp, "#pragma link C++ class nanoaod::%s-!;\n", cn);
+   }
+
+   fclose(fp);
+}
+
 void Event::autogen_nano_classes()
 {
-   FILE *fp = fopen("nano_mama.C", "w");
+   FILE *fp = fopen("CmsNanoClasses.hxx", "w");
+   fprintf(fp, "#ifndef CLASSES_BOOTSTRAP_H\n");
+   fprintf(fp, "#define CLASSES_BOOTSTRAP_H\n");
 
+   fprintf(fp, "#include \"TClass.h\"\n");
+   fprintf(fp, "#include \"CmsNanoAod.hxx\"\n");
    fprintf(fp, "namespace nanoaod\n{\n\n");
 
    for (auto& mc : m_mama_colls)
@@ -164,7 +181,19 @@ void Event::autogen_nano_classes()
       fprintf(fp, "\n");
    }
 
-   fprintf(fp, "//========================================================================\n\n");
+   fprintf(fp, "} // end namespace nanoaod\n");
+
+   fprintf(fp,"#endif\n");
+
+   fclose(fp);
+
+   //========================================================================
+
+
+   fp = fopen("CmsNanoClasses.cxx", "w");
+
+   fprintf(fp, "#include \"CmsNanoClasses.hxx\"\n");
+   fprintf(fp, "namespace nanoaod\n{\n\n");
 
    fprintf(fp, "struct SetterUpper { SetterUpper() { Event::s_setup_mama_for_type = [](MamaCollection& mc)\n{\n  ");
 
@@ -188,6 +217,7 @@ void Event::autogen_nano_classes()
    fprintf(fp, "};} } setter_upper;\n\n");
 
    fprintf(fp, "} // end namespace nanoaod\n");
+
 
    fclose(fp);
 }
@@ -228,14 +258,15 @@ void Event::UseTree(TTree *tree)
    }
    md5.Final();
 
-   TMD5 *md5_on_file = TMD5::ReadChecksum("nano_mama.md5");
+   TMD5 *md5_on_file = TMD5::ReadChecksum("CmsNanoClasses.md5");
 
    if ( ! md5_on_file || strcmp(md5.AsString(), md5_on_file->AsString()) != 0)
    {
       printf("Regenerating nano classes ...\n");
 
+      autogen_linkdef();
       autogen_nano_classes();
-      TMD5::WriteChecksum("nano_mama.md5", &md5);
+      TMD5::WriteChecksum("CmsNanoClasses.md5", &md5);
    }
    else
    {
@@ -244,12 +275,6 @@ void Event::UseTree(TTree *tree)
 
    delete md5_on_file;
 
-   gROOT->ProcessLine(".L nano_mama.C");
-
-   for (auto& mc : m_mama_colls)
-   {
-      s_setup_mama_for_type(mc);
-   }
 }
 
 void Event::CloseFile()
@@ -266,6 +291,27 @@ void Event::CloseFile()
    m_tree = 0;
 }
 
+void Event::LoadFile(const std::string& file_name,  const std::string& tree_name)
+{
+   m_file = TFile::Open(file_name.c_str());
+
+   if (m_file == nullptr || m_file->IsZombie()) throw std::runtime_error("file opening root file");
+
+   m_tree = (TTree*) m_file->Get("Events");
+
+   TObjArray *leaves   = m_tree->GetListOfLeaves();
+   Int_t      n_leaves = leaves ? leaves->GetEntriesFast() : 0;
+   for (int l = 0; l < n_leaves; ++l)
+   {
+      TLeaf *leaf = (TLeaf*) leaves->UncheckedAt(l);
+      consider_leaf(leaf);
+   }
+
+   for (auto& mc : m_mama_colls)
+   {
+      s_setup_mama_for_type(mc);
+   }
+}
 
 //------------------------------------------------------------------------------
 
