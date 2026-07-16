@@ -10,7 +10,7 @@ CmsNanoAod_dict.cxx: CmsNanoAod.hxx
 
 #===============================================================================
 
-amtclasses: TestBootstrap.o libCmsNanoAod.so
+amtclasses: libCmsNanoAod.so
 	$(CXX) ${CPPFLAGS} ${CXXFLAGS} -o $@ TestBootstrap.cxx \
 		-L. -Wl,-rpath,'$$ORIGIN' \
 		-lCmsNanoAod $(shell root-config --libs)
@@ -24,9 +24,9 @@ CmsNanoClasses_dict.cxx: CmsNanoClasses.hxx
 
 EvdGui_dict.cxx: EveMng.hxx EvdGuiLinkDef.h
 	@rm -f EvdGui_dict.cxx
-	rootcling -f EvdGui_dict.cxx EveMng.hxx EvdGuiLinkDef.h
+	rootcling -f EvdGui_dict.cxx EveMng.hxx proxyBuilders.cxx EvdGuiLinkDef.h
 
-libNanoClassesEvd.so: CmsNanoClasses.cxx CmsNanoClasses_dict.cxx  libCmsNanoAod.so EvdGui_dict.cxx
+libNanoClassesEvd.so: CmsNanoClasses.hxx CmsNanoClasses_dict.cxx  libCmsNanoAod.so EvdGui_dict.cxx
 	$(CXX) -shared -o $@ \
 	    $(CPPFLAGS) $(CXXFLAGS) \
 	    CmsNanoClasses.cxx CmsNanoClasses_dict.cxx EvdGui_dict.cxx \
@@ -72,5 +72,11 @@ clean:
 	rm -f amtclasses
 	rm -f CmsNanoClasses_dict.cxx
 	rm -f EvdGui_dict.cxx
+	rm -f libNanoClassesEvd.so
+	rm -f evd
+
+cleanevd:
+	rm -f CmsNanoClasses.md5 CmsNanoClasses.hxx CmsNanoClasses.cxx
+	rm -f amtclasses
 	rm -f libNanoClassesEvd.so
 	rm -f evd

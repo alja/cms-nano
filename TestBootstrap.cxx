@@ -1,29 +1,32 @@
 #include "TestBootstrap.h"
+#include <nlohmann/json.hpp>
+#include <fstream>
+#include <iostream>
+
+using json = nlohmann::json;
 
 nanoaod::Event* g_event = nullptr;
 
-void cms_nano_aod_config_event(nanoaod::Event* e)
+int main(int argc, char **argv)
 {
-   // EventInfo is handled specifically to pick up run / lumi / event ids.
-   e->RegisterMamaCollection("EventInfo");
+   const char *filename = (argc > 1) ? argv[1] : "cmap.json";
+   std::ifstream in(filename);
+   if (!in)
+   {
+      std::cerr << "Failed to open file: " << filename << "\n";
+      return 1;
+   }
 
-   e->RegisterMamaCollection("Electron");
-   e->RegisterMamaCollection("Jet");
-   e->RegisterMamaCollection("MET");
-   e->RegisterMamaCollection("Muon");
-}
+   json j;
+   in >> j;
 
-void cms_nano_aod_bootstrap()
-{
    g_event = new nanoaod::Event();
 
-   cms_nano_aod_config_event(g_event);
-
+   g_event->RegisterMamaCollection("EventInfo");
+   for (const auto &c : j["collections"])
+      g_event->RegisterMamaCollection(c["name"]);
+   
    g_event->OpenFileAndUseTree(
-      "nano-CMSSW_11_0_0-RelValZTT-mcRun.root");
-}
-int main(int argc, char** argv)
-{
-   cms_nano_aod_bootstrap();
+       "nano-CMSSW_11_0_0-RelValZTT-mcRun.root");
    return 0;
 }

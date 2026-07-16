@@ -242,23 +242,19 @@ void EventManager::PreviousEvent()
     GotoEvent(id);
 }
 
-void EventManager::dummyTest()
+void EventManager::loadConfig(nlohmann::json& j)
 {
-    REveDataCollection *jetCollection = new REveDataCollection("Jet");
-    jetCollection->SetMainColor(kYellow);
-    m_collectionMng->addCollection(jetCollection, new JetProxyBuilder());
+   for (const auto &c : j["collections"])
+   {
+    std::string cname = c["name"];
+     REveDataCollection *eveCol = new REveDataCollection(cname.c_str());
+     eveCol->SetMainColor(kMagenta);
 
-    jetCollection->SetFilterExpr("i.pt() > 25");
-
-    REveDataCollection *muCollection = new REveDataCollection("Muon");
-    muCollection->SetMainColor(kRed);
-    m_collectionMng->addCollection(muCollection, new MuonProxyBuilder());
-
-    REveDataCollection *elCollection = new REveDataCollection("Electron");
-    m_collectionMng->addCollection(elCollection, new ElectronProxyBuilder());
-
-    REveDataCollection *lCollection = new REveDataCollection("MET");
-    m_collectionMng->addCollection(lCollection, new METProxyBuilder());
+     std::string pbName = c["proxyBuilder"];
+     TClass *cl = TClass::GetClass(pbName.c_str());
+     REveDataProxyBuilderBase* pb = (REveDataProxyBuilderBase*)cl->New();
+     m_collectionMng->addCollection(eveCol, pb);
+   }
 }
 
 void EventManager::createScenesAndViews()

@@ -75,7 +75,7 @@ public:
     virtual void NextEvent();
     virtual void PreviousEvent();
 
-    void dummyTest();
+    void loadConfig(nlohmann::json&);
     void createScenesAndViews();
 
 void SetNanoEvent(nanoaod::Event *e) { m_event = e; }

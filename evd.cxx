@@ -33,14 +33,28 @@
 #include "TRint.h"
 
 #include "EveMng.hxx"
+#include <nlohmann/json.hpp>
+#include <fstream>
+#include <iostream>
 
 // globals
 ROOT::Experimental::REveManager* eveMng;
 
 using namespace ROOT::Experimental;
+using json = nlohmann::json;
 
 int main(int argc, char **argv)
 {
+   const char *filename = (argc > 1) ? argv[1] : "cmap.json";
+   std::ifstream in(filename);
+   if (!in)
+   {
+      std::cerr << "Failed to open file: " << filename << "\n";
+      return 1;
+   }
+
+   json j;
+   in >> j;
 
    const char *dummyArgvArray[] = {argv[0]};
    char **dummyArgv = const_cast<char **>(dummyArgvArray);
@@ -53,11 +67,8 @@ int main(int argc, char **argv)
    gSystem->Load("libNanoClassesEvd.so");
    auto event = new nanoaod::Event();
    event->RegisterMamaCollection("EventInfo");
-
-   event->RegisterMamaCollection("Electron");
-   event->RegisterMamaCollection("Jet");
-   event->RegisterMamaCollection("MET");
-   event->RegisterMamaCollection("Muon");
+   for (const auto &c : j["collections"])
+      event->RegisterMamaCollection(c["name"]);
 
    event->LoadFile("nano-CMSSW_11_0_0-RelValZTT-mcRun.root");
    event->GotoEvent(0);
@@ -72,7 +83,7 @@ int main(int argc, char **argv)
    eventMng->UpdateTitle();
    eventMng->SetName(event->GetFile()->GetName());
 
-   eventMng->dummyTest();
+   eventMng->loadConfig(j);
 
    eventMng->GotoEvent(0);
    eveMng->GetWorld()->AddElement(eventMng);
