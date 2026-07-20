@@ -1,6 +1,10 @@
 CPPFLAGS := -I$(shell root-config --incdir)
 CXXFLAGS := -O0 -g -fPIC $(shell root-config --auxcflags)
 
+
+ROOTFILE ?= nano-CMSSW_11_0_0-RelValZTT-mcRun.root
+CONFIG   ?= cmap.json
+
 libCmsNanoAod.so:  CmsNanoAod.hxx CmsNanoAod.cxx CmsNanoAod_dict.cxx
 	${CXX} -shared -o $@ ${CPPFLAGS} ${CXXFLAGS} CmsNanoAod.cxx CmsNanoAod_dict.cxx
 
@@ -10,13 +14,14 @@ CmsNanoAod_dict.cxx: CmsNanoAod.hxx
 
 #===============================================================================
 
-amtclasses: libCmsNanoAod.so
+gen-classes: libCmsNanoAod.so
 	$(CXX) ${CPPFLAGS} ${CXXFLAGS} -o $@ TestBootstrap.cxx \
 		-L. -Wl,-rpath,'$$ORIGIN' \
 		-lCmsNanoAod $(shell root-config --libs)
 
-CmsNanoClasses.hxx: amtclasses
-	./amtclasses
+CmsNanoClasses.hxx: gen-classes
+	./gen-classes $(ROOTFILE) --fconfig $(CONFIG)
+
 
 CmsNanoClasses_dict.cxx: CmsNanoClasses.hxx
 	@rm -f CmsNanoClasses_dict.cxx
@@ -36,6 +41,9 @@ evd: libNanoClassesEvd.so
 	$(CXX) ${CPPFLAGS} ${CXXFLAGS} -o $@ evd.cxx EveMng.cxx \
 		-L. -Wl,-rpath,'$$ORIGIN' \
 		-lNanoClassesEvd -lCmsNanoAod -lEG -lGeom -lROOTWebDisplay -lROOTEve $(shell root-config --libs)
+
+display: evd
+	./evd $(ROOTFILE) --fconfig $(CONFIG)
 
 #
 #=================================================================================
@@ -69,7 +77,7 @@ clean:
 	rm -rf CmsNanoAod_cxx.d CmsNanoAod_cxx_ACLiC_dict_rdict.pcm CmsNanoAod_cxx.so
 	rm -rf CmsNanoClasses.md5 CmsNanoClasses.hxx CmsNanoClasses.cxx
 	rm -f TestBootstrap.o
-	rm -f amtclasses
+	rm -f gen-classes
 	rm -f CmsNanoClasses_dict.cxx
 	rm -f EvdGui_dict.cxx
 	rm -f libNanoClassesEvd.so
@@ -77,6 +85,6 @@ clean:
 
 cleanevd:
 	rm -f CmsNanoClasses.md5 CmsNanoClasses.hxx CmsNanoClasses.cxx
-	rm -f amtclasses
+	rm -f nanoClassGen
 	rm -f libNanoClassesEvd.so
 	rm -f evd

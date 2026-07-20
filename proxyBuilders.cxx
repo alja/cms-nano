@@ -87,8 +87,9 @@ class MuonProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::Muon
       SetupAddElement(track, iItemHolder, true);
    }
 };
-
-class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
+/////////////////////////////////////////////////////////////////////////////////////
+template<typename T>
+class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
 {
    struct Cell {
       float thetaMin;
@@ -231,15 +232,15 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
    } // end makeEndCapCell
 
 
-   using REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>::BuildItemViewType;
+   using REveDataSimpleProxyBuilderTemplate<T>::BuildItemViewType;
    void BuildItemViewType(const nanoaod::Jet& cdj, int idx, REveElement* iItemHolder,
                       const std::string& viewType, const REveViewContext* context) override
    {
-      nanoaod::Jet& dj = (nanoaod::Jet&)(cdj);
+      T& dj = (T&)(cdj);
       auto jet = new REveJetCone();
       jet->SetCylinder(context->GetMaxR() -5, context->GetMaxZ());
       jet->AddEllipticCone(dj.eta(), dj.phi(), 0.2, 0.2);
-      SetupAddElement(jet, iItemHolder, true);
+      this->SetupAddElement(jet, iItemHolder, true);
       jet->SetTitle(Form("jet %d", idx));
       printf("make jet %d\n", idx);
       
@@ -276,7 +277,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
             makeEndCapCell(cell, offset,  TMath::Sign(val*energyScale, dj.eta()), &pnts[0]);
             REveBox* reveBox = new REveBox();
             reveBox->SetVertices(pnts);
-            SetupAddElement(reveBox, iItemHolder, true);
+            this->SetupAddElement(reveBox, iItemHolder, true);
          }
       }
       else
@@ -288,7 +289,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
             makeBarrelCell(cell, offset, val*energyScale, &pnts[0]);
             REveBox* reveBox = new REveBox();
             reveBox->SetVertices(pnts);
-            SetupAddElement(reveBox, iItemHolder, true);
+            this->SetupAddElement(reveBox, iItemHolder, true);
             reveBox->SetTitle(Form("jet %d", idx)); // amt this is workaround and should be unnecessary
          }
       }
@@ -308,17 +309,17 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<nanoaod::Jet>
 
 
 //==============================================================================
-
-class METProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::MET>
+template<typename T>
+class METProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 {
 public:
    virtual bool HaveSingleProduct() const override { return false; }
 
-   using REveDataSimpleProxyBuilderTemplate<nanoaod::MET>::BuildItemViewType;
-   virtual void BuildItemViewType(const nanoaod::MET &c_met, int /*idx*/, ROOT::Experimental::REveElement *iItemHolder,
+   using REveDataSimpleProxyBuilderTemplate<T>::BuildItemViewType;
+   virtual void BuildItemViewType(const T &c_met, int /*idx*/, ROOT::Experimental::REveElement *iItemHolder,
                                   const std::string &viewType, const REveViewContext *context) override
    {
-       nanoaod::MET& met = (nanoaod::MET&)(c_met);
+      T& met = (T&)(c_met);
       using namespace TMath;
       double phi = met.phi();
      // double theta = 1;//EtaToTheta(met.eta());
@@ -329,7 +330,7 @@ public:
       marker->SetLineWidth(2);
       marker->SetAlwaysSecSelect(false);
 
-      SetupAddElement(marker, iItemHolder);
+      this->SetupAddElement(marker, iItemHolder);
 
       float offr = 5;
       float r_ecal = context->GetMaxR() + offr;
