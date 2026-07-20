@@ -248,7 +248,7 @@ void EventManager::loadConfig(nlohmann::json& j)
    {
     std::string cname = c["name"];
      REveDataCollection *eveCol = new REveDataCollection(cname.c_str());
-     eveCol->SetMainColor(kMagenta);
+     eveCol->SetMainColor(c["color"]);
 
      std::string pbName = c["proxyBuilder"];
      TClass *cl = TClass::GetClass(pbName.c_str());
