@@ -121,30 +121,34 @@ void CollectionManager::addCollection(REveDataCollection *collection, REveDataPr
 
     // load data
     LoadCurrentEventInCollection(collection);
-    glBuilder->SetCollection(collection);
-    glBuilder->SetHaveAWindow(true);
 
-    for (auto &scene : eveMng->GetScenes()->RefChildren())
+    if (glBuilder)
     {
+        glBuilder->SetCollection(collection);
+        glBuilder->SetHaveAWindow(true);
 
-        REveElement *product = glBuilder->CreateProduct(scene->GetTitle(), viewContext);
+        for (auto &scene : eveMng->GetScenes()->RefChildren())
+        {
 
-        if (strncmp(scene->GetCName(), "Table", 5) == 0)
-            continue;
-        if (!strncmp(scene->GetCTitle(), "RhoZProjected", 8))
-        {
-            REveElement *product = glBuilder->CreateProduct("RhoZViewType", viewContext);
-            mngRhoZ->ImportElements(product, scene);
-            continue;
-        }
-        else if ((!strncmp(scene->GetCName(), "Event scene", 8)))
-        {
             REveElement *product = glBuilder->CreateProduct(scene->GetTitle(), viewContext);
-            scene->AddElement(product);
+
+            if (strncmp(scene->GetCName(), "Table", 5) == 0)
+                continue;
+            if (!strncmp(scene->GetCTitle(), "RhoZProjected", 8))
+            {
+                REveElement *product = glBuilder->CreateProduct("RhoZViewType", viewContext);
+                mngRhoZ->ImportElements(product, scene);
+                continue;
+            }
+            else if ((!strncmp(scene->GetCName(), "Event scene", 8)))
+            {
+                REveElement *product = glBuilder->CreateProduct(scene->GetTitle(), viewContext);
+                scene->AddElement(product);
+            }
         }
+        m_builders.push_back(glBuilder);
+        glBuilder->Build();
     }
-    m_builders.push_back(glBuilder);
-    glBuilder->Build();
 
     // Tables
     auto tableBuilder = new REveTableProxyBuilder();
@@ -270,19 +274,29 @@ void EventManager::PreviousEvent()
     GotoEvent(id);
 }
 
-void EventManager::loadConfig(nlohmann::json& j)
+void EventManager::loadConfig(nlohmann::json &j)
 {
-   for (const auto &c : j["collections"])
-   {
-    std::string cname = c["name"];
-     REveDataCollection *eveCol = new REveDataCollection(cname.c_str());
-     eveCol->SetMainColor(c["color"]);
+    for (const auto &c : j["collections"])
+    {
+        std::string cname = c["name"];
+        REveDataCollection *eveCol = new REveDataCollection(cname.c_str());
 
-     std::string pbName = c["proxyBuilder"];
-     TClass *cl = TClass::GetClass(pbName.c_str());
-     REveDataProxyBuilderBase* pb = (REveDataProxyBuilderBase*)cl->New();
-     m_collectionMng->addCollection(eveCol, pb);
-   }
+        if (c.contains("proxyBuilder") && c["proxyBuilder"].is_string())
+        {
+            //std::string pbName = c["proxyBuilder"];
+
+            eveCol->SetMainColor(c["color"]);
+
+            std::string pbName = c["proxyBuilder"];
+            TClass *cl = TClass::GetClass(pbName.c_str());
+            REveDataProxyBuilderBase *pb = (REveDataProxyBuilderBase *)cl->New();
+            m_collectionMng->addCollection(eveCol, pb);
+        }
+        else
+        {
+             m_collectionMng->addCollection(eveCol, nullptr);
+        }
+    }
 }
 
 void EventManager::createScenesAndViews()

@@ -1,0 +1,48 @@
+{
+    "collections": [
+      {
+        "name": "PV",
+        "proxyBuilder": "VertexProxyBuilder",
+        "color": 632
+      },
+      {
+        "name": "MET",
+        "proxyBuilder": "METProxyBuilder<nanoaod::MET>",
+        "color": 632
+      },
+      {
+        "name": "CaloMET",
+        "proxyBuilder": "METProxyBuilder<nanoaod::CaloMET>",
+        "color": 800
+      },
+      {
+        "name": "ChsMET",
+        "proxyBuilder": "METProxyBuilder<nanoaod::ChsMET>",
+        "color": 626
+      },
+      {
+        "name": "Jet",
+        "proxyBuilder": "JetProxyBuilder<nanoaod::Jet>",
+        "color":400
+      },
+      {
+        "name": "Muon",
+        "proxyBuilder": "MuonProxyBuilder",
+        "color": 632
+
+      },
+      {
+        "name": "Electron",
+        "proxyBuilder": "ElectronProxyBuilder<nanoaod::Electron>",
+        "color":600
+      },
+      {
+        "name": "Tau",
+        "proxyBuilder": "ElectronProxyBuilder<nanoaod::Tau>",
+        "color": 616
+      },
+      {
+        "name": "HLT"
+      }
+    ]
+}
