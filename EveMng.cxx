@@ -23,6 +23,9 @@
 #include <ROOT/REveViewContext.hxx>
 #include <ROOT/REveBox.hxx>
 
+#include <ROOT/REveSelection.hxx>
+
+
 #include "TTree.h"
 #include "TFile.h"
 #include "TEnv.h"
@@ -47,6 +50,26 @@ ROOT::Experimental::REveViewContext* viewContext;
 ROOT::Experimental::REveTrackPropagator* muonPropagator_g;
 
 //==============================================================================
+
+class FWSelectionDeviator : public REveSelection::Deviator {
+public:
+   FWSelectionDeviator() {}
+
+   using REveSelection::Deviator::DeviateSelection;
+   bool DeviateSelection(REveSelection *selection, REveElement *el, bool multi, bool secondary,
+                         const std::set<int> &secondary_idcs)
+   {
+      if (el) {
+         auto *colItems = dynamic_cast<REveDataItemList *>(el);
+         if (colItems) {
+            // std::cout << "Deviate RefSelected=" << colItems->RefSelectedSet().size() << " passed set " << secondary_idcs.size() << "\n";
+            ExecuteNewElementPicked(selection, colItems, multi, true, colItems->RefSelectedSet());
+            return true;
+         }
+      }
+      return false;
+   }
+};
 
 //==============================================================================
 
@@ -196,6 +219,11 @@ EventManager::EventManager(CollectionManager *m, nanoaod::Event *e) : REveElemen
 {
     m_collectionMng = m;
     m_event = e;
+
+  auto deviator = std::make_shared<FWSelectionDeviator>();
+  gEve->GetSelection()->SetDeviator(deviator);
+  gEve->GetHighlight()->SetDeviator(deviator);
+    
     createScenesAndViews();
 }
 
@@ -289,6 +317,7 @@ void EventManager::createScenesAndViews()
     tableInfo->table("nanoaod::Electron").column("pt", 1, "i.pt()").column("eta", 3, "i.eta()").column("phi", 3, "i.phi()");
 
     tableInfo->table("nanoaod::MET").column("pt", 1, "i.pt()");
+    tableInfo->table("nanoaod::PV").column("x", 3, "i.x()").column("y", 3, "i.y()").column("z", 3, "i.z()");
 
     viewContext->SetTableViewInfo(tableInfo);
 
@@ -297,6 +326,7 @@ void EventManager::createScenesAndViews()
     float dr = 3;
     b1->SetShape(new TGeoTube(r - 2, r + 2, z));
     b1->SetMainColor(kCyan);
+    b1->SetMainTransparency(80);
     eveMng->GetGlobalScene()->AddElement(b1);
 
     // Projected RhoZ

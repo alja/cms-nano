@@ -17,6 +17,7 @@
 #include <ROOT/REveViewer.hxx>
 #include <ROOT/REveViewContext.hxx>
 #include <ROOT/REveBox.hxx>
+#include <ROOT/REvePointSet.hxx>
 #include "CmsNanoClasses.hxx"
 
 extern ROOT::Experimental::REveTrackPropagator* muonPropagator_g;
@@ -33,12 +34,14 @@ float EtaToTheta(float eta)
       return 2*ATan(Exp(- Abs(eta)));
 }
 
-class ElectronProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::Electron>
+///////////////////////////////////////////////////////////////////////////////////////
+template<typename T>
+class ElectronProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 {
-   using REveDataSimpleProxyBuilderTemplate<nanoaod::Electron>::BuildItem;
-   void BuildItem(const nanoaod::Electron& c_electron, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
+   using REveDataSimpleProxyBuilderTemplate<T>::BuildItem;
+   void BuildItem(const T& c_electron, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
    {
-      nanoaod::Electron& electron = (nanoaod::Electron&)(c_electron);
+      T& electron = (T&)(c_electron);
       int pdg = 11 * electron.charge();
 
       float theta = EtaToTheta(electron.eta());
@@ -55,11 +58,28 @@ class ElectronProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::
       // printf("==============  BUILD track %s (pt=%f, eta=%f) \n", iItemHolder->GetCName(), p.Pt(), p.Eta());
       auto track = new REveTrack((TParticle *)(x), 1, context->GetPropagator());
       track->MakeTrack();
-      SetupAddElement(track, iItemHolder, true);
+      this->SetupAddElement(track, iItemHolder, true);
       // iItemHolder->AddElement(track);
       // track->SetName(Form("element %s id=%d", iItemHolder->GetCName(), track->GetElementId()));
    }
 };
+
+/////////////////////////////////////////////////////////////////////////////////////
+class VertexProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::PV>
+{
+     using REveDataSimpleProxyBuilderTemplate<nanoaod::PV>::BuildItem;
+   void BuildItem(const nanoaod::PV& c_pv, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
+   {
+
+      nanoaod::PV& pv = (nanoaod::PV&)(c_pv);
+      REvePointSet* ps = new REvePointSet();
+      ps->SetNextPoint(pv.x(), pv.y(), pv.z());
+      ps->SetMarkerSize(4);
+      this->SetupAddElement(ps, iItemHolder);
+   }
+};
+
+/////////////////////////////////////////////////////////////////////////////////////
 
 class MuonProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::Muon>
 {
