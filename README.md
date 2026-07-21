@@ -12,7 +12,7 @@ Visualization of nanoAod
 
   * start event display with make
 
-`make`
+` make display ROOTFILE=nano-CMSSW_11_0_0-RelValZTT-mcRun.root `
 
 
 ### Note
