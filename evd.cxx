@@ -42,64 +42,7 @@ ROOT::Experimental::REveManager* eveMng;
 
 using namespace ROOT::Experimental;
 using json = nlohmann::json;
-/*
-int main(int argc, char **argv)
-{
-   const char *filename = (argc > 1) ? argv[1] : "cmap.json";
-   std::ifstream in(filename);
-   if (!in)
-   {
-      std::cerr << "Failed to open file: " << filename << "\n";
-      return 1;
-   }
 
-   json j;
-   in >> j;
-
-   const char *dummyArgvArray[] = {argv[0]};
-   char **dummyArgv = const_cast<char **>(dummyArgvArray);
-   int dummyArgc = 1;
-   TRint *app = new TRint("evd-test", &dummyArgc, dummyArgv);
-
-   int portNum = 9092;
-
-   // init nanoaod stuff
-   gSystem->Load("libNanoClassesEvd.so");
-   auto event = new nanoaod::Event();
-   event->RegisterMamaCollection("EventInfo");
-   for (const auto &c : j["collections"])
-      event->RegisterMamaCollection(c["name"]);
-
-   event->LoadFile("nano-CMSSW_11_0_0-RelValZTT-mcRun.root");
-   event->GotoEvent(0);
-
-   // init REve stuff
-   eveMng = REveManager::Create();
-   eveMng->AllowMultipleRemoteConnections(false, false);
-   // createScenesAndViews();
-   auto collectionMng = new CollectionManager(event);
-
-   auto eventMng = new EventManager(collectionMng, event);
-   eventMng->UpdateTitle();
-   eventMng->SetName(event->GetFile()->GetName());
-
-   eventMng->loadConfig(j);
-
-   eventMng->GotoEvent(0);
-   eveMng->GetWorld()->AddElement(eventMng);
-
-   std::string locPath = "ui5";
-   eveMng->AddLocation("mydir/", locPath);
-   eveMng->SetDefaultHtmlPage("file:mydir/eventDisplay.html");
-
-   gEnv->SetValue("WebEve.DisableShow", 1);
-   gEnv->SetValue("WebGui.HttpMaxAge", 0);
-   gEnv->SetValue("WebGui.HttpPort", portNum);
-   eveMng->Show();
-   app->Run();
-
-   return 0;
-}*/
 int main(int argc, char **argv)
 {
    const char *rootFile = nullptr;
@@ -159,7 +102,6 @@ int main(int argc, char **argv)
 
    auto event = new nanoaod::Event();
 
-   event->RegisterMamaCollection("EventInfo");
    for (const auto &c : j["collections"])
       event->RegisterMamaCollection(c["name"]);
 
@@ -175,12 +117,14 @@ int main(int argc, char **argv)
 
    auto eventMng = new EventManager(collectionMng, event);
 
-   eventMng->UpdateTitle();
+   
    eventMng->SetName(event->GetFile()->GetName());
 
    eventMng->loadConfig(j);
 
    eventMng->GotoEvent(0);
+   eventMng->UpdateTitle();
+
    eveMng->GetWorld()->AddElement(eventMng);
 
    std::string locPath = "ui5";

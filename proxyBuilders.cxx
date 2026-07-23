@@ -65,13 +65,14 @@ class ElectronProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 };
 
 /////////////////////////////////////////////////////////////////////////////////////
-class VertexProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::PV>
+template<typename T>
+class VertexProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 {
-     using REveDataSimpleProxyBuilderTemplate<nanoaod::PV>::BuildItem;
-   void BuildItem(const nanoaod::PV& c_pv, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
+   using REveDataSimpleProxyBuilderTemplate<T>::BuildItem;
+   void BuildItem(const T& c_pv, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
    {
 
-      nanoaod::PV& pv = (nanoaod::PV&)(c_pv);
+      T& pv = (T&)(c_pv);
       REvePointSet* ps = new REvePointSet();
       ps->SetNextPoint(pv.x(), pv.y(), pv.z());
       ps->SetMarkerSize(4);
@@ -80,14 +81,14 @@ class VertexProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::PV
 };
 
 /////////////////////////////////////////////////////////////////////////////////////
-
-class MuonProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::Muon>
+template<typename T>
+class MuonProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 {
-   using REveDataSimpleProxyBuilderTemplate<nanoaod::Muon>::BuildItem;
-   void BuildItem(const nanoaod::Muon& c_electron, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
+   using REveDataSimpleProxyBuilderTemplate<T>::BuildItem;
+   void BuildItem(const T& c_electron, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
    {
 
-      nanoaod::Muon& electron = (nanoaod::Muon&)(c_electron);
+      T& electron = (T&)(c_electron);
       int pdg = 11 * electron.charge();
 
       float theta = EtaToTheta(electron.eta());
@@ -104,7 +105,7 @@ class MuonProxyBuilder : public REveDataSimpleProxyBuilderTemplate<nanoaod::Muon
       // printf("==============  BUILD track %s (pt=%f, eta=%f) \n", iItemHolder->GetCName(), p.Pt(), p.Eta());
       auto track = new REveTrack((TParticle*)(x), 1, muonPropagator_g);
       track->MakeTrack();
-      SetupAddElement(track, iItemHolder, true);
+      this->SetupAddElement(track, iItemHolder, true);
    }
 };
 /////////////////////////////////////////////////////////////////////////////////////
@@ -253,7 +254,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
 
 
    using REveDataSimpleProxyBuilderTemplate<T>::BuildItemViewType;
-   void BuildItemViewType(const nanoaod::Jet& cdj, int idx, REveElement* iItemHolder,
+   void BuildItemViewType(const T& cdj, int idx, REveElement* iItemHolder,
                       const std::string& viewType, const REveViewContext* context) override
    {
       T& dj = (T&)(cdj);

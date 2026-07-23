@@ -240,6 +240,7 @@ void EventManager::GotoEvent(int id)
 
 void EventManager::UpdateTitle()
 {
+    return;
     nanoaod::MamaCollection &mc = m_event->RefColl("EventInfo");
     nanoaod::EventInfo ei = mc.get_item_with_class<nanoaod::EventInfo>(0);
 
@@ -279,6 +280,9 @@ void EventManager::loadConfig(nlohmann::json &j)
     for (const auto &c : j["collections"])
     {
         std::string cname = c["name"];
+        if (cname == "EventInfo")
+            continue;
+
         REveDataCollection *eveCol = new REveDataCollection(cname.c_str());
 
         if (c.contains("proxyBuilder") && c["proxyBuilder"].is_string())

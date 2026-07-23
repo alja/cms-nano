@@ -193,17 +193,21 @@ void Event::autogen_nano_classes()
    fp = fopen("CmsNanoClasses.cxx", "w");
 
    fprintf(fp, "#include \"CmsNanoClasses.hxx\"\n");
+   fprintf(fp, "#include <iostream>\n");
    fprintf(fp, "namespace nanoaod\n{\n\n");
 
-   fprintf(fp, "struct SetterUpper { SetterUpper() { Event::s_setup_mama_for_type = [](MamaCollection& mc)\n{\n  ");
+   fprintf(fp, "struct SetterUpper {\n"
+               " SetterUpper() {\n"
+               "  Event::s_setup_mama_for_type = [](MamaCollection& mc) {\n  ");
 
    for (auto& mc : m_mama_colls)
    {
       const char *cn = mc.get_class_name().c_str();
 
       fprintf(fp,
-              " if (mc.get_class_name() == \"%s\")\n"
+              "   if (mc.get_class_name() == \"%s\")\n"
               "   {\n"
+              "      std::cerr << \"setup called for \" << mc.get_class_name() << std::endl;  \n "
               "      mc.m_item_ctor  = [](MamaCollection& m, int idx) { return new %s(m, idx); };\n"
               "      mc.m_item_dtor  = [](void* item) { delete (%s*) item; };\n"
               "      mc.m_item_class = TClass::GetClass<%s>();\n"
@@ -214,7 +218,7 @@ void Event::autogen_nano_classes()
    }
    fprintf(fp, "\n   {\n      throw std::runtime_error(mc.get_class_name() + \" unknown class name\");\n   }\n");
 
-   fprintf(fp, "};} } setter_upper;\n\n");
+   fprintf(fp, "  };\n   }\n} setter_upper;\n\n");
 
    fprintf(fp, "} // end namespace nanoaod\n");
 
