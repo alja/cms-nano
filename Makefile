@@ -2,7 +2,7 @@ CPPFLAGS := -I$(shell root-config --incdir)
 CXXFLAGS := -O0 -g -fPIC $(shell root-config --auxcflags)
 
 
-ROOTFILE ?= BTag.root
+ROOTFILE ?= BTag_100.root
 CONFIG   ?= cmap.json
 
 #===============================================================================
