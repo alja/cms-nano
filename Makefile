@@ -74,7 +74,7 @@ libNanoClassesEvd.so: CmsNanoClasses.o CmsNanoClasses_dict.o EvdGui_dict.o libCm
 		-L. -lCmsNanoAod \
 		$(shell root-config --libs)
 
-evd: libNanoClassesEvd.so
+evd: evd.cxx EveMng.cxx EveMng.hxx proxyBuilders.cxx libNanoClassesEvd.so
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ \
 		evd.cxx EveMng.cxx \
 		-L. -Wl,-rpath,'$$ORIGIN' \
