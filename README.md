@@ -2,6 +2,8 @@
 
 Web-based event display for CMS NanoAOD files, built on ROOT's EVE 7 (REve).
 
+cms-nano reads NanoAOD directly: it generates one C++ class per collection from the file's branches, so every branch can be used in tables and filter expressions. The event display itself (views, projections, navigation, tables, GUI) comes from [VSDNano](https://github.com/alja/VSDNano). cms-nano plugs into it as a data provider (`NanoProvider.h`) with its own proxy builders (`NanoProxyBuilders.h`).
+
 ![screenshot](https://user-images.githubusercontent.com/2516492/78937920-cebbed80-7aa0-11ea-9ab9-7c8b5cd14957.png)
 
 ## Requirements
@@ -10,6 +12,7 @@ Web-based event display for CMS NanoAOD files, built on ROOT's EVE 7 (REve).
 - A C++17 compiler (GCC or Clang)
 - [nlohmann/json](https://github.com/nlohmann/json) headers (Fedora: `json-devel`, Debian/Ubuntu: `nlohmann-json3-dev`)
 - `jq`, which the Makefile uses to generate the proxy-builder LinkDef from the config
+- A checkout of [VSDNano](https://github.com/alja/VSDNano), branch `fw-provider` (see below)
 - A web browser to view the display
 
 ## Building ROOT from master
@@ -46,16 +49,20 @@ root-config --features | tr ' ' '\n' | grep -E '^(root7|webgui|http)$'
 ```bash
 source ~/root-dev/master/build/bin/thisroot.sh   # in every new shell
 
+git clone --branch fw-provider https://github.com/alja/VSDNano.git ~/root-dev/VSDNano
 git clone https://github.com/alja/cms-nano.git
 cd cms-nano
 make evd
 ```
 
-The build has three steps:
+The Makefile looks for VSDNano in `~/root-dev/VSDNano`. To use another location, pass it to every `make` call, e.g. `make evd VSDNANO=/path/to/VSDNano`. `make evd` builds VSDNano's libraries if they are missing; after changing VSDNano, rebuild it with `make` in its own directory.
+
+The build has four steps:
 
 1. `libCmsNanoAod.so`: generic NanoAOD reading code.
 2. `gen-classes` reads the data file and the config, and generates `CmsNanoClasses.hxx/.cxx`, one class per collection.
-3. `libNanoClassesEvd.so` and `evd`: the generated classes, the proxy builders and the event display executable.
+3. `libNanoClassesEvd.so`: the generated classes and the proxy builders named in the config.
+4. `evd`: `NanoProvider` plus VSDNano's event display, linked against VSDNano's `libVsdDict.so` and `libFWDict.so`.
 
 The generated classes depend on the data file's branches. To switch to a file with a different layout, rebuild from scratch:
 
@@ -64,7 +71,7 @@ make clean
 make evd ROOTFILE=/path/to/other_nano.root
 ```
 
-After upgrading ROOT, also run `make clean` before rebuilding.
+After upgrading ROOT, run `make clean` before rebuilding, and also `make clean` in VSDNano: its C++ modules must match the ROOT build.
 
 ## Running
 
@@ -106,17 +113,20 @@ ssh -L 9092:localhost:9092 user@remote-host
 {
   "collections": [
     { "name": "EventInfo" },
-    { "name": "Jet", "proxyBuilder": "JetProxyBuilder<nanoaod::Jet>", "color": 632 },
+    { "name": "Jet", "proxyBuilder": "nanoaod::JetProxyBuilder<nanoaod::Jet>", "color": 632, "filter": "i.pt() > 20" },
     { "name": "HLT" }
   ]
 }
 ```
 
 - `name` is the NanoAOD collection (branch prefix) name.
-- `proxyBuilder` is optional: a class from `proxyBuilders.cxx` that draws the collection. Collections without one are loaded and shown in tables, but not drawn in 3D.
-- `color` is a ROOT color index (632 is `kRed`).
+- `proxyBuilder` is optional: a class template from `NanoProxyBuilders.h`, instantiated for the collection's class. Collections without one are loaded and shown in tables, but not drawn in 3D.
+- `color` is optional: a ROOT color index (632 is `kRed`).
+- `filter` is optional: a filter expression on the item `i`, using any generated accessor.
+- `var` is optional: proxy-builder parameters shown in the GUI, in VSDNano's format (see `FWDataCollection.h` there).
+- `EventInfo` is loaded but not shown as a collection.
 
-Table columns are set in `EventManager::createScenesAndViews()` in `EveMng.cxx`.
+The default table columns are set in `NanoProvider::SetupTables()` in `NanoProvider.h`. Columns can also be added in the GUI with "Edit Collection Columns".
 
 ## Make targets
 

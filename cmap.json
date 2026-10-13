@@ -5,27 +5,27 @@
       },
       {
         "name": "PV",
-        "proxyBuilder": "VertexProxyBuilder<nanoaod::PV>",
+        "proxyBuilder": "nanoaod::VertexProxyBuilder<nanoaod::PV>",
         "color": 632
       },
       {
         "name": "Jet",
-        "proxyBuilder": "JetProxyBuilder<nanoaod::Jet>",
+        "proxyBuilder": "nanoaod::JetProxyBuilder<nanoaod::Jet>",
         "color": 632
       },
       {
         "name": "Muon",
-        "proxyBuilder": "MuonProxyBuilder<nanoaod::Muon>",
+        "proxyBuilder": "nanoaod::MuonProxyBuilder<nanoaod::Muon>",
         "color": 632
       },
       {
         "name": "Electron",
-        "proxyBuilder": "ElectronProxyBuilder<nanoaod::Electron>",
+        "proxyBuilder": "nanoaod::ElectronProxyBuilder<nanoaod::Electron>",
         "color": 632
       },
       {
         "name": "Tau",
-        "proxyBuilder": "ElectronProxyBuilder<nanoaod::Tau>",
+        "proxyBuilder": "nanoaod::ElectronProxyBuilder<nanoaod::Tau>",
         "color": 632
       },
       {

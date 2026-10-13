@@ -1,47 +1,17 @@
-#include "TClass.h"
-#include "CmsNanoClasses.hxx"
+#include "NanoProvider.h"
 
+// event display from VSDNano: scenes, views, managers and GUI
+#include "evd_main.cc"
 
-#include "ROOT/REveDataCollection.hxx"
-#include "ROOT/REveDataSimpleProxyBuilderTemplate.hxx"
-#include "ROOT/REveManager.hxx"
-#include "ROOT/REveScalableStraightLineSet.hxx"
-#include "ROOT/REveViewContext.hxx"
-#include <ROOT/REveGeoShape.hxx>
-#include <ROOT/REveJetCone.hxx>
-#include <ROOT/REvePointSet.hxx>
-#include <ROOT/REveProjectionBases.hxx>
-#include <ROOT/REveProjectionManager.hxx>
-#include <ROOT/REveScene.hxx>
-#include <ROOT/REveTableProxyBuilder.hxx>
-#include <ROOT/REveTableInfo.hxx>
-#include <ROOT/REveTrack.hxx>
-#include <ROOT/REveTrackPropagator.hxx>
-#include <ROOT/REveViewer.hxx>
-#include <ROOT/REveViewContext.hxx>
-#include <ROOT/REveBox.hxx>
-
-#include "TTree.h"
-#include "TFile.h"
 #include "TEnv.h"
-#include "TGeoTube.h"
-#include "TList.h"
-#include "TParticle.h"
-#include "TRandom.h"
-#include "TApplication.h"
-#include "TMathBase.h"
 #include "TRint.h"
 
-#include "EveMng.hxx"
-#include <nlohmann/json.hpp>
 #include <fstream>
 #include <iostream>
 
-// globals
-ROOT::Experimental::REveManager* eveMng;
-
-using namespace ROOT::Experimental;
-using json = nlohmann::json;
+#ifndef VSDNANO_DIR
+#define VSDNANO_DIR "."
+#endif
 
 int main(int argc, char **argv)
 {
@@ -85,9 +55,8 @@ int main(int argc, char **argv)
       return 1;
    }
 
-   json j;
+   nlohmann::json j;
    in >> j;
-
 
    // TApplication writes argv[argc] = nullptr, so leave room for the terminator
    const char *dummyArgvArray[] = {argv[0], nullptr};
@@ -96,47 +65,14 @@ int main(int argc, char **argv)
    int dummyArgc = 1;
    TRint *app = new TRint("evd-test", &dummyArgc, dummyArgv);
 
-   int portNum = 9092;
-
-   // init nanoaod stuff
-   gSystem->Load("libNanoClassesEvd.so");
-
-   auto event = new nanoaod::Event();
-
-   for (const auto &c : j["collections"])
-      event->RegisterMamaCollection(c["name"]);
-
-   event->LoadFile(rootFile);
-   event->GotoEvent(0);
-
-
-   // init REve stuff
-   eveMng = REveManager::Create();
-   eveMng->AllowMultipleRemoteConnections(false, false);
-
-   auto collectionMng = new CollectionManager(event);
-
-   auto eventMng = new EventManager(collectionMng, event);
-
-   
-   eventMng->SetName(event->GetFile()->GetName());
-
-   eventMng->loadConfig(j);
-
-   eventMng->GotoEvent(0);
-   eventMng->UpdateTitle();
-
-   eveMng->GetWorld()->AddElement(eventMng);
-
-   std::string locPath = "ui5";
-   eveMng->AddLocation("mydir/", locPath);
-   eveMng->SetDefaultHtmlPage("file:mydir/eventDisplay.html");
-
-   gEnv->SetValue("WebEve.DisableShow", 1);
    gEnv->SetValue("WebGui.HttpMaxAge", 0);
-   gEnv->SetValue("WebGui.HttpPort", portNum);
+   gEnv->SetValue("WebGui.HttpPort", 9092);
 
-   eveMng->Show();
+   auto prov = new NanoProvider(rootFile, j);
+
+   // ui5/ and data/ come from VSDNano
+   evd_run(prov, VSDNANO_DIR);
+
    app->Run();
 
    return 0;

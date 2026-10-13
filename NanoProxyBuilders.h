@@ -1,3 +1,6 @@
+#ifndef NanoProxyBuilders_h
+#define NanoProxyBuilders_h
+
 
 #include "ROOT/REveDataCollection.hxx"
 #include "ROOT/REveDataSimpleProxyBuilderTemplate.hxx"
@@ -20,11 +23,19 @@
 #include <ROOT/REvePointSet.hxx>
 #include "CmsNanoClasses.hxx"
 
-extern ROOT::Experimental::REveTrackPropagator* muonPropagator_g;
+#include "TParticle.h"
 
+// Proxy builders for the generated NanoAOD classes. They are templates on the
+// item class, instantiated in EvdGuiLinkDef.h from the proxyBuilder entries in
+// the config, e.g. "nanoaod::JetProxyBuilder<nanoaod::Jet>". They live in
+// namespace nanoaod so they don't clash with VSDNano's builders of the same name.
+
+namespace nanoaod
+{
 
 using namespace ROOT::Experimental;
-float EtaToTheta(float eta)
+
+inline float EtaToTheta(float eta)
 {
    using namespace TMath;
 
@@ -84,6 +95,21 @@ class VertexProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 template<typename T>
 class MuonProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 {
+   REveTrackPropagator *m_muonPropagator = nullptr;
+
+   REveTrackPropagator *muonPropagator()
+   {
+      if (!m_muonPropagator) {
+         m_muonPropagator = new REveTrackPropagator();
+         m_muonPropagator->SetMagFieldObj(new REveMagFieldDuo(350, -3.5, 2.0));
+         m_muonPropagator->SetMaxR(850);
+         m_muonPropagator->SetMaxZ(1100);
+         m_muonPropagator->SetMaxOrbs(6);
+         m_muonPropagator->IncRefCount();
+      }
+      return m_muonPropagator;
+   }
+
    using REveDataSimpleProxyBuilderTemplate<T>::BuildItem;
    void BuildItem(const T& c_electron, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
    {
@@ -103,7 +129,7 @@ class MuonProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
                                        0, 0, 0, 0 );
 
       // printf("==============  BUILD track %s (pt=%f, eta=%f) \n", iItemHolder->GetCName(), p.Pt(), p.Eta());
-      auto track = new REveTrack((TParticle*)(x), 1, muonPropagator_g);
+      auto track = new REveTrack((TParticle*)(x), 1, muonPropagator());
       track->MakeTrack();
       this->SetupAddElement(track, iItemHolder, true);
    }
@@ -424,3 +450,7 @@ public:
       marker->SetScale(energyScale * value);
    }
 };
+
+} // namespace nanoaod
+
+#endif

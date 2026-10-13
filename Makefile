@@ -5,6 +5,9 @@ CXXFLAGS := -O0 -g -fPIC $(shell root-config --auxcflags)
 ROOTFILE ?= BTag_100.root
 CONFIG   ?= cmap.json
 
+# VSDNano provides the event display: managers, views and GUI (ui5/, data/)
+VSDNANO  ?= $(HOME)/root-dev/VSDNano
+
 #===============================================================================
 #================= CORE ========================================================
 #===============================================================================
@@ -53,14 +56,13 @@ CmsNanoClasses_dict.o: CmsNanoClasses_dict.cxx CmsNanoClasses.hxx
 #===============================================================================
 
 EvdGuiLinkDef.h: $(CONFIG)
-	@echo '#pragma link C++ class EventManager-!;' > $@
 	jq -r \
 	  '.collections[] | select(has("proxyBuilder")) | "#pragma link C++ class \(.proxyBuilder)-!;"' \
-	  $< >> $@
+	  $< > $@
 
-EvdGui_dict.cxx: EveMng.hxx EvdGuiLinkDef.h
+EvdGui_dict.cxx: NanoProxyBuilders.h CmsNanoClasses.hxx EvdGuiLinkDef.h
 	@rm -f EvdGui_dict.cxx
-	rootcling -f EvdGui_dict.cxx EveMng.hxx proxyBuilders.cxx EvdGuiLinkDef.h
+	rootcling -f EvdGui_dict.cxx NanoProxyBuilders.h EvdGuiLinkDef.h
 
 
 EvdGui_dict.o: EvdGui_dict.cxx
@@ -74,12 +76,19 @@ libNanoClassesEvd.so: CmsNanoClasses.o CmsNanoClasses_dict.o EvdGui_dict.o libCm
 		-L. -lCmsNanoAod \
 		$(shell root-config --libs)
 
-evd: evd.cxx EveMng.cxx EveMng.hxx proxyBuilders.cxx libNanoClassesEvd.so
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ \
-		evd.cxx EveMng.cxx \
+$(VSDNANO)/libVsdDict.so $(VSDNANO)/libFWDict.so:
+	$(MAKE) -C $(VSDNANO) libVsdDict.so libFWDict.so
+
+evd: evd.cxx NanoProvider.h libNanoClassesEvd.so $(VSDNANO)/libVsdDict.so $(VSDNANO)/libFWDict.so
+	$(CXX) $(CPPFLAGS) -I$(VSDNANO) $(CXXFLAGS) -DVSDNANO_DIR='"$(VSDNANO)"' -o $@ \
+		evd.cxx \
 		-L. -Wl,-rpath,'$$ORIGIN' \
+		-L$(VSDNANO) -Wl,-rpath,$(VSDNANO) \
+		-Wl,--no-as-needed \
 		-lNanoClassesEvd \
 		-lCmsNanoAod \
+		-lVsdDict \
+		-lFWDict \
 		-lEG -lGeom -lROOTWebDisplay -lROOTEve \
 		$(shell root-config --libs)
 
