@@ -1,17 +1,19 @@
 {
     "collections": [
       {
-        "name": "EventInfo"
-      },
-      {
         "name": "PV",
         "proxyBuilder": "nanoaod::VertexProxyBuilder<nanoaod::PV>",
         "color": 632
       },
       {
+        "name": "CaloMET",
+        "proxyBuilder": "nanoaod::METProxyBuilder<nanoaod::CaloMET>",
+        "color": 800
+      },
+      {
         "name": "Jet",
         "proxyBuilder": "nanoaod::JetProxyBuilder<nanoaod::Jet>",
-        "color": 632
+        "color": 400
       },
       {
         "name": "Muon",
@@ -21,12 +23,7 @@
       {
         "name": "Electron",
         "proxyBuilder": "nanoaod::ElectronProxyBuilder<nanoaod::Electron>",
-        "color": 632
-      },
-      {
-        "name": "Tau",
-        "proxyBuilder": "nanoaod::ElectronProxyBuilder<nanoaod::Tau>",
-        "color": 632
+        "color": 600
       },
       {
         "name": "HLT"
