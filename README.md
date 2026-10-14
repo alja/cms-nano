@@ -134,5 +134,6 @@ The default table columns are set in `NanoProvider::SetupTables()` in `NanoProvi
 |-----------|--------------|
 | `evd`     | Build the event display |
 | `display` | Build and run the event display |
+| `serviceVSDMama` | Build the event display service, see `serviceVSDMama.cc` |
 | `amtprint`| Build a test program that prints collection contents |
 | `clean`   | Remove all build outputs and generated classes |

@@ -92,6 +92,19 @@ evd: evd.cxx NanoProvider.h libNanoClassesEvd.so $(VSDNANO)/libVsdDict.so $(VSDN
 		-lEG -lGeom -lROOTWebDisplay -lROOTEve \
 		$(shell root-config --libs)
 
+serviceVSDMama: serviceVSDMama.cc NanoProvider.h libNanoClassesEvd.so $(VSDNANO)/libVsdDict.so $(VSDNANO)/libFWDict.so $(VSDNANO)/FWService.h
+	$(CXX) $(CPPFLAGS) -I$(VSDNANO) $(CXXFLAGS) -DVSDNANO_DIR='"$(VSDNANO)"' -o $@ \
+		serviceVSDMama.cc \
+		-L. -Wl,-rpath,'$$ORIGIN' \
+		-L$(VSDNANO) -Wl,-rpath,$(VSDNANO) \
+		-Wl,--no-as-needed \
+		-lNanoClassesEvd \
+		-lCmsNanoAod \
+		-lVsdDict \
+		-lFWDict \
+		-lEG -lGeom -lROOTWebDisplay -lROOTEve \
+		$(shell root-config --libs)
+
 display: evd
 	./evd $(ROOTFILE) --fconfig $(CONFIG)
 
@@ -135,7 +148,7 @@ clean:
 	rm -f EvdGui_dict.cxx EvdGui_dict.o EvdGui_dict_rdict.pcm
 	rm -f libNanoClassesEvd.so
 	rm -f libNanoClassesPrint.so
-	rm -f evd amtprint
+	rm -f evd amtprint serviceVSDMama
 
 cleanevd:
 	rm -f CmsNanoClasses.md5 CmsNanoClasses.hxx CmsNanoClasses.cxx
