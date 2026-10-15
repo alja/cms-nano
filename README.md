@@ -52,10 +52,12 @@ source ~/root-dev/master/build/bin/thisroot.sh   # in every new shell
 git clone --branch fw-provider https://github.com/alja/VSDNano.git ~/root-dev/VSDNano
 git clone https://github.com/alja/cms-nano.git
 cd cms-nano
-make evd
+make -j$(nproc) evd
 ```
 
 The Makefile looks for VSDNano in `~/root-dev/VSDNano`. To use another location, pass it to every `make` call, e.g. `make evd VSDNANO=/path/to/VSDNano`. `make evd` builds VSDNano's libraries if they are missing; after changing VSDNano, rebuild it with `make` in its own directory.
+
+A clean build takes about a minute with `-j`. Most of it is compiling the ROOT dictionaries: `EvdGui_dict.o`, the proxy builders, alone takes about 40 s.
 
 The build has four steps:
 
@@ -64,12 +66,14 @@ The build has four steps:
 3. `libNanoClassesEvd.so`: the generated classes and the proxy builders named in the config.
 4. `evd`: `NanoProvider` plus VSDNano's event display, linked against VSDNano's `libVsdDict.so` and `libFWDict.so`.
 
-The generated classes depend on the data file's branches. To switch to a file with a different layout, rebuild from scratch:
+The generated classes depend on the collections in the config and on the data file's branches, but `make` does not track either. After adding or removing collections in the config, or to switch to a file with a different layout, rebuild from scratch:
 
 ```bash
 make clean
-make evd ROOTFILE=/path/to/other_nano.root
+make -j$(nproc) evd ROOTFILE=/path/to/other_nano.root CONFIG=my_config.json
 ```
+
+The generated accessors read branches by position, not by name: `Jet::pt()` returns the Nth `Jet_*` leaf of the file. A file whose branches for a configured collection differ from the file the classes were generated from (one branch added, removed or reordered) loads without an error but shows wrong values. Files from the same release and data-taking era usually have the same layout; files from other releases often do not.
 
 After upgrading ROOT, run `make clean` before rebuilding, and also `make clean` in VSDNano: its C++ modules must match the ROOT build.
 
@@ -100,6 +104,33 @@ Forward the port over SSH, then open the printed URL locally:
 ```bash
 ssh -L 9092:localhost:9092 user@remote-host
 ```
+
+## Event display service
+
+`serviceVSDMama` starts event displays on request, one process per user session, for a web front end. It is VSDNano's `FWService` with `NanoProvider` as data provider.
+
+```bash
+make -j$(nproc) serviceVSDMama
+./serviceVSDMama --port 5556
+```
+
+The default port is 5556. The service reads `.rootrc` from the directory it runs in; set the port range of the display web servers there, and HTTPS if the displays are reached through a proxy:
+
+```
+WebGui.HttpPortMin: 10000
+WebGui.HttpPortMax: 10099
+WebGui.UseHttps:    yes
+WebGui.ServerCert:  /path/to/server.pem
+```
+
+A client sends one JSON request per connection, ending with a newline:
+
+```bash
+echo '{"action": "load", "file": "/path/to/nano.root", "config": "/path/to/cmap.json",
+       "user": "me", "logdir": "/tmp/logs", "logdirurl": "file:///tmp/logs/"}' | nc localhost 5556
+```
+
+The reply gives the port and path of the new display, e.g. `{ 'port'=>10074, 'dir'=>'win1/?token=...', 'key'=>'...', 'log_fname'=>'...' }`, or `'error'` if the file or config can't be used. Starting a display takes about 8 s. `"config"` can be a path or the config itself as a JSON object; its collections must be among those the service was built with. `{"action": "stop_server"}` stops the service.
 
 ## Data
 

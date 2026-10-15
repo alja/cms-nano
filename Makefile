@@ -39,6 +39,9 @@ gen-classes: libCmsNanoAod.so
 CmsNanoClasses.cxx: gen-classes
 	./gen-classes $(ROOTFILE) --fconfig $(CONFIG)
 
+# gen-classes writes the header too
+CmsNanoClasses.hxx: CmsNanoClasses.cxx ;
+
 
 CmsNanoClasses_dict.cxx: CmsNanoClasses.hxx
 	@rm -f CmsNanoClasses_dict.cxx
