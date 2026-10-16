@@ -4,7 +4,7 @@ Web-based event display for CMS NanoAOD files, built on ROOT's EVE 7 (REve).
 
 cms-nano reads NanoAOD directly: it generates one C++ class per collection from the file's branches, so every branch can be used in tables and filter expressions. The event display itself (views, projections, navigation, tables, GUI) comes from [VSDNano](https://github.com/alja/VSDNano). cms-nano plugs into it as a data provider (`NanoProvider.h`) with its own proxy builders (`NanoProxyBuilders.h`).
 
-![screenshot](https://user-images.githubusercontent.com/2516492/78937920-cebbed80-7aa0-11ea-9ab9-7c8b5cd14957.png)
+![cms-nano event display](docs/cms-nano.png)
 
 ## Requirements
 
