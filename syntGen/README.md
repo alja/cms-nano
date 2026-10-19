@@ -10,9 +10,12 @@ pT / eta / phi.
 - `dump_jets.py`, `skim_nano.py`, `make_display.py`: NanoAOD jet dumping,
   NanoAOD skimming and a small standalone HTML event display (Python, uproot).
 
-`make` needs `pythia8-config` and `fastjet-config` in `PATH`. On the
-development Mac they come from `~/cms-dev/external/env.sh`, which also has the
-uproot venv for the Python scripts:
+`make` needs Pythia 8 and FastJet, found as described in `externals.mk`:
+`PYTHIA8=` / `FASTJET=` prefixes, `pythia8-config` / `fastjet-config` in
+`PATH`, or the copies `make externals` builds in `../external` (with
+`build_externals.sh`). On the development Mac they are in PATH from
+`~/cms-dev/external/env.sh`, which also has the uproot venv for the Python
+scripts:
 
 ```bash
 source ~/cms-dev/external/env.sh       # Pythia 8.318, FastJet 3.5.2, uproot venv

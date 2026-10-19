@@ -180,10 +180,28 @@ default, 1 black, 616 magenta), or in the config:
 ```
 
 The generator is `libSynthJetGen.so` in [syntGen](syntGen/) (set `SYNTHGEN` to
-use another copy). It needs Pythia 8 and FastJet, with `pythia8-config` and
-`fastjet-config` in `PATH`; `make` builds it if missing. syntGen also has the
-standalone tools used to develop it: `jetgen`, NanoAOD jet dumping and a
-small HTML event display.
+use another copy); `make` builds it if missing. It needs Pythia 8 and FastJet,
+found in this order:
+
+1. install prefixes given to make: `make evd PYTHIA8=<dir> FASTJET=<dir>`
+2. `pythia8-config` and `fastjet-config` in `PATH`, e.g. from an LCG view on cvmfs
+3. copies built by `make externals`, which downloads Pythia 8.318 and
+   FastJet 3.5.2, checks their SHA-256 and builds them into `external/`
+   (git-ignored; about 5 minutes, once)
+
+If none is found, `make` stops and lists these options. To build without
+synthetic tracks, and without Pythia 8 and FastJet, use `SYNTH=0`:
+
+```bash
+make -j$(nproc) evd SYNTH=0
+```
+
+Switching `SYNTH` rebuilds what depends on it. On macOS, if the Command Line
+Tools linker cannot use the newest SDK, `make externals` picks an older SDK and
+says so; set the same `SDKROOT` for the rest of the build.
+
+syntGen also has the standalone tools used to develop the generator: `jetgen`,
+NanoAOD jet dumping and a small HTML event display.
 
 ## Make targets
 
@@ -193,4 +211,5 @@ small HTML event display.
 | `display` | Build and run the event display |
 | `serviceVSDMama` | Build the event display service, see `serviceVSDMama.cc` |
 | `amtprint`| Build a test program that prints collection contents |
+| `externals` | Download and build Pythia 8 and FastJet into `external/` |
 | `clean`   | Remove all build outputs and generated classes |

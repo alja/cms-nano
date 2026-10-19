@@ -1,8 +1,8 @@
-# source ../external/env.sh first
-PYTHIA_CXXFLAGS  := $(shell pythia8-config --cxxflags | sed 's/-std=c++11//')
-FASTJET_CXXFLAGS := $(shell fastjet-config --cxxflags)
+# Pythia 8 and FastJet are found as described in externals.mk;
+# 'make externals' downloads and builds them if needed.
+include externals.mk
+
 CXXFLAGS := -O2 -std=c++17 -Wall -fPIC
-GEN_LIBS := $(shell pythia8-config --libs) $(shell fastjet-config --libs)
 
 ifeq ($(shell uname -s),Darwin)
   SONAME    = -Wl,-install_name,@rpath/$@
@@ -14,14 +14,14 @@ endif
 
 all: jetgen libSynthJetGen.so
 
-SynthJetGen.o: SynthJetGen.cc SynthJetGen.h
+SynthJetGen.o: SynthJetGen.cc SynthJetGen.h | check-externals
 	$(CXX) $(CXXFLAGS) $(PYTHIA_CXXFLAGS) $(FASTJET_CXXFLAGS) \
-	    -DPYTHIA8_XMLDOC='"$(shell pythia8-config --xmldoc)"' -c $< -o $@
+	    -DPYTHIA8_XMLDOC='"$(PYTHIA_XMLDOC)"' -c $< -o $@
 
-libSynthJetGen.so: SynthJetGen.o
+libSynthJetGen.so: SynthJetGen.o | check-externals
 	$(CXX) -shared $(SONAME) -o $@ $< $(GEN_LIBS)
 
-jetgen: jetgen.cc SynthJetGen.h libSynthJetGen.so
+jetgen: jetgen.cc SynthJetGen.h libSynthJetGen.so | check-externals
 	$(CXX) $(CXXFLAGS) $(PYTHIA_CXXFLAGS) $< -o $@ -L. -lSynthJetGen $(EXE_RPATH) $(GEN_LIBS)
 
 clean:

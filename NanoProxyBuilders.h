@@ -24,7 +24,9 @@
 #include <ROOT/REvePointSet.hxx>
 #include "CmsNanoClasses.hxx"
 #include "FWDataCollection.h"
+#ifdef CMSNANO_SYNTH  // make SYNTH=1, the default
 #include "SynthTracks.h"
+#endif
 
 #include "TParticle.h"
 
@@ -150,18 +152,10 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
 
    bool HaveSingleProduct() const override { return false; }
 
-   // GUI parameter of the jet collection: draw synthetic charged tracks
-   // (Pythia 8 constituents, see SynthTracks.h) inside each jet.
-   static constexpr const char *kSynthTracks = "SynthTracks";
-   // ROOT color index of the synthetic tracks, e.g. 922 gray, 1 black, 616 magenta.
-   // Not green: that is the selection highlight.
-   static constexpr const char *kSynthTrackColor = "SynthTrackColor";
-
    // Depth in the 2D projections (evd_main.cc: geometry -4, event objects 0).
    // Jet cones and energy boxes are drawn behind the synthetic tracks, which
    // stay behind the reconstructed muons and electrons.
    static constexpr int   kJetLayer = -2;
-   static constexpr float kSynthTrackDepth = -1;
 
    using REveDataProxyBuilderBase::SetCollection;
    void SetCollection(REveDataCollection *collection) override
@@ -170,12 +164,24 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
       // The projection manager uses the layer as the current depth when
       // projecting this collection's items.
       collection->SetLayer(kJetLayer);
+#ifdef CMSNANO_SYNTH
       if (auto fwc = dynamic_cast<FWDataCollection *>(collection))
       {
          fwc->assertParameter(kSynthTracks, true);
          fwc->assertParameter(kSynthTrackColor, long(kGray + 2));
       }
+#endif
    }
+
+#ifdef CMSNANO_SYNTH
+   // GUI parameter of the jet collection: draw synthetic charged tracks
+   // (Pythia 8 constituents, see SynthTracks.h) inside each jet.
+   static constexpr const char *kSynthTracks = "SynthTracks";
+   // ROOT color index of the synthetic tracks, e.g. 922 gray, 1 black, 616 magenta.
+   // Not green: that is the selection highlight.
+   static constexpr const char *kSynthTrackColor = "SynthTrackColor";
+
+   static constexpr float kSynthTrackDepth = -1;
 
    // The whole jet item is projected at kJetLayer; move the projected
    // synthetic tracks in front of it.
@@ -210,6 +216,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
       auto fwc = dynamic_cast<FWDataCollection *>(this->Collection());
       return fwc && fwc->getBoolParameter(kSynthTracks);
    }
+#endif // CMSNANO_SYNTH
 
    void makeBarrelCell( Cell &cellData, float &offset , float towerH, float *pnts)
    {
@@ -405,6 +412,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
          }
       }
 
+#ifdef CMSNANO_SYNTH
       if (drawSynthTracks())
       {
          auto fwc = dynamic_cast<FWDataCollection *>(this->Collection());
@@ -415,6 +423,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
             this->SetupAddElement(track, iItemHolder, false);
          }
       }
+#endif
    }
 
 

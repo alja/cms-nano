@@ -1,0 +1,4 @@
+# downloaded and built by make externals
+external/
+# records the SYNTH setting of the last build
+.synth_config

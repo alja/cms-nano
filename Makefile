@@ -1,5 +1,6 @@
-CPPFLAGS := -I$(shell root-config --incdir)
-CXXFLAGS := -O0 -g -fPIC $(shell root-config --auxcflags)
+# 2> /dev/null: targets like 'externals' do not need ROOT
+CPPFLAGS := -I$(shell root-config --incdir 2> /dev/null)
+CXXFLAGS := -O0 -g -fPIC $(shell root-config --auxcflags 2> /dev/null)
 
 
 ROOTFILE ?= BTag_100.root
@@ -8,11 +9,20 @@ CONFIG   ?= cmap.json
 # VSDNano provides the event display: managers, views and GUI (ui5/, data/)
 VSDNANO  ?= $(HOME)/root-dev/VSDNano
 
-# Synthetic jet tracks (Pythia 8 + FastJet) drawn by JetProxyBuilder, see SynthTracks.h.
-# libSynthJetGen.so is built in its own directory: make -C $(SYNTHGEN) libSynthJetGen.so
-# It needs pythia8-config and fastjet-config in PATH (see syntGen/README.md).
+CPPFLAGS += -I$(VSDNANO)
+
+# Synthetic jet tracks drawn by JetProxyBuilder (see SynthTracks.h), generated
+# by libSynthJetGen in $(SYNTHGEN) with Pythia 8 and FastJet. Those are found
+# as described in syntGen/externals.mk; 'make externals' downloads and builds
+# them. SYNTH=0 builds without synthetic tracks and needs neither.
+SYNTH    ?= 1
 SYNTHGEN ?= $(CURDIR)/syntGen
-CPPFLAGS += -I$(SYNTHGEN) -I$(VSDNANO)
+ifeq ($(SYNTH),1)
+  SYNTH_FLAGS  = -DCMSNANO_SYNTH -I$(SYNTHGEN)
+  SYNTH_LIB    = $(SYNTHGEN)/libSynthJetGen.so
+  SYNTH_LDLIBS = -L$(SYNTHGEN) -Wl,-rpath,$(SYNTHGEN) -lSynthJetGen
+endif
+CPPFLAGS += $(SYNTH_FLAGS)
 
 # Platform linker options. macOS: libraries are found through @rpath and
 # there is no --(no-)as-needed.
@@ -84,9 +94,16 @@ EvdGuiLinkDef.h: $(CONFIG)
 	  '.collections[] | select(has("proxyBuilder")) | "#pragma link C++ class \(.proxyBuilder)-!;"' \
 	  $< > $@
 
-EvdGui_dict.cxx: NanoProxyBuilders.h SynthTracks.h $(SYNTHGEN)/SynthJetGen.h CmsNanoClasses.hxx EvdGuiLinkDef.h
+EvdGui_dict.cxx: NanoProxyBuilders.h SynthTracks.h CmsNanoClasses.hxx EvdGuiLinkDef.h .synth_config
 	@rm -f EvdGui_dict.cxx
-	rootcling -f EvdGui_dict.cxx -I$(SYNTHGEN) -I$(VSDNANO) NanoProxyBuilders.h EvdGuiLinkDef.h
+	rootcling -f EvdGui_dict.cxx -I$(VSDNANO) $(SYNTH_FLAGS) NanoProxyBuilders.h EvdGuiLinkDef.h
+
+# Records SYNTH, rewritten only when it changes, so that switching it
+# rebuilds the dictionary and the libraries that depend on it.
+.synth_config: FORCE
+	@echo "$(SYNTH)" | cmp -s - $@ || echo "$(SYNTH)" > $@
+
+FORCE:
 
 
 EvdGui_dict.o: EvdGui_dict.cxx
@@ -95,13 +112,17 @@ EvdGui_dict.o: EvdGui_dict.cxx
 $(SYNTHGEN)/libSynthJetGen.so:
 	$(MAKE) -C $(SYNTHGEN) libSynthJetGen.so
 
-libNanoClassesEvd.so: CmsNanoClasses.o CmsNanoClasses_dict.o EvdGui_dict.o libCmsNanoAod.so $(SYNTHGEN)/libSynthJetGen.so
+# Download and build Pythia 8 and FastJet into $(SYNTHGEN)/../external
+externals:
+	$(MAKE) -C $(SYNTHGEN) externals
+
+libNanoClassesEvd.so: CmsNanoClasses.o CmsNanoClasses_dict.o EvdGui_dict.o libCmsNanoAod.so $(SYNTH_LIB)
 	$(CXX) -shared $(SONAME) -o $@ \
 		CmsNanoClasses.o \
 		CmsNanoClasses_dict.o \
 		EvdGui_dict.o \
 		-L. -lCmsNanoAod \
-		-L$(SYNTHGEN) -Wl,-rpath,$(SYNTHGEN) -lSynthJetGen \
+		$(SYNTH_LDLIBS) \
 		-lEG -lGeom -lROOTWebDisplay -lROOTEve \
 		$(shell root-config --libs)
 
@@ -167,6 +188,7 @@ amtprint: TestPrint.o libNanoClassesPrint.so
 #===============================================================================
 
 clean:
+	rm -f .synth_config
 	rm -rf EvdGuiLinkDef.h
 	rm -rf libCmsNanoAod.so CmsNanoAod_dict* CmsNanoAod.o
 	rm -rf CmsNanoAod_cxx.d CmsNanoAod_cxx_ACLiC_dict_rdict.pcm CmsNanoAod_cxx.so
