@@ -10,7 +10,8 @@ VSDNANO  ?= $(HOME)/root-dev/VSDNano
 
 # Synthetic jet tracks (Pythia 8 + FastJet) drawn by JetProxyBuilder, see SynthTracks.h.
 # libSynthJetGen.so is built in its own directory: make -C $(SYNTHGEN) libSynthJetGen.so
-SYNTHGEN ?= $(HOME)/cms-dev/syntGen
+# It needs pythia8-config and fastjet-config in PATH (see syntGen/README.md).
+SYNTHGEN ?= $(CURDIR)/syntGen
 CPPFLAGS += -I$(SYNTHGEN) -I$(VSDNANO)
 
 # Platform linker options. macOS: libraries are found through @rpath and

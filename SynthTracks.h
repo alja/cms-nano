@@ -4,7 +4,7 @@
 // Synthetic charged-particle tracks for NanoAOD jets, drawn by JetProxyBuilder.
 //
 // For every jet, synth::JetGenerator (Pythia 8 standalone shower +
-// hadronization, see ~/cms-dev/syntGen/SynthJetGen.h) produces a plausible set
+// hadronization, see syntGen/SynthJetGen.h) produces a plausible set
 // of constituents matched to the jet pT / eta / phi. Charged ones become
 // REveTracks with the display's track propagator. They are NOT the
 // reconstructed tracks of the event.

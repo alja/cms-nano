@@ -179,8 +179,11 @@ default, 1 black, 616 magenta), or in the config:
            { "name": "SynthTrackColor", "type": "Long", "val": 616 } ] }
 ```
 
-The generator is `libSynthJetGen.so` from `~/cms-dev/syntGen` (set `SYNTHGEN`
-to change it), which needs Pythia 8 and FastJet. `make` builds it if missing.
+The generator is `libSynthJetGen.so` in [syntGen](syntGen/) (set `SYNTHGEN` to
+use another copy). It needs Pythia 8 and FastJet, with `pythia8-config` and
+`fastjet-config` in `PATH`; `make` builds it if missing. syntGen also has the
+standalone tools used to develop it: `jetgen`, NanoAOD jet dumping and a
+small HTML event display.
 
 ## Make targets
 
