@@ -8,6 +8,21 @@ CONFIG   ?= cmap.json
 # VSDNano provides the event display: managers, views and GUI (ui5/, data/)
 VSDNANO  ?= $(HOME)/root-dev/VSDNano
 
+# Platform linker options. macOS: libraries are found through @rpath and
+# there is no --(no-)as-needed.
+UNAME ?= $(shell uname -s)
+ifeq ($(UNAME),Darwin)
+  SONAME       = -Wl,-install_name,@rpath/$@
+  EXE_RPATH    = -Wl,-rpath,@loader_path
+  NO_AS_NEEDED =
+  AS_NEEDED    =
+else
+  SONAME       =
+  EXE_RPATH    = -Wl,-rpath,'$$ORIGIN'
+  NO_AS_NEEDED = -Wl,--no-as-needed
+  AS_NEEDED    = -Wl,--as-needed
+endif
+
 #===============================================================================
 #================= CORE ========================================================
 #===============================================================================
@@ -23,7 +38,7 @@ CmsNanoAod_dict.o: CmsNanoAod_dict.cxx
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fPIC -c $<
 
 libCmsNanoAod.so: CmsNanoAod.o CmsNanoAod_dict.o
-	$(CXX) -shared -o $@ \
+	$(CXX) -shared $(SONAME) -o $@ \
 	    CmsNanoAod.o CmsNanoAod_dict.o \
 	    $(shell root-config --libs)
 
@@ -33,7 +48,7 @@ libCmsNanoAod.so: CmsNanoAod.o CmsNanoAod_dict.o
 
 gen-classes: libCmsNanoAod.so
 	$(CXX) ${CPPFLAGS} ${CXXFLAGS} -o $@ TestBootstrap.cxx \
-		-L. -Wl,-rpath,'$$ORIGIN' \
+		-L. $(EXE_RPATH) \
 		-lCmsNanoAod $(shell root-config --libs)
 
 CmsNanoClasses.cxx: gen-classes
@@ -72,11 +87,12 @@ EvdGui_dict.o: EvdGui_dict.cxx
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fPIC -c $<
 
 libNanoClassesEvd.so: CmsNanoClasses.o CmsNanoClasses_dict.o EvdGui_dict.o libCmsNanoAod.so
-	$(CXX) -shared -o $@ \
+	$(CXX) -shared $(SONAME) -o $@ \
 		CmsNanoClasses.o \
 		CmsNanoClasses_dict.o \
 		EvdGui_dict.o \
 		-L. -lCmsNanoAod \
+		-lEG -lGeom -lROOTWebDisplay -lROOTEve \
 		$(shell root-config --libs)
 
 $(VSDNANO)/libVsdDict.so $(VSDNANO)/libFWDict.so:
@@ -85,9 +101,9 @@ $(VSDNANO)/libVsdDict.so $(VSDNANO)/libFWDict.so:
 evd: evd.cxx NanoProvider.h libNanoClassesEvd.so $(VSDNANO)/libVsdDict.so $(VSDNANO)/libFWDict.so
 	$(CXX) $(CPPFLAGS) -I$(VSDNANO) $(CXXFLAGS) -DVSDNANO_DIR='"$(VSDNANO)"' -o $@ \
 		evd.cxx \
-		-L. -Wl,-rpath,'$$ORIGIN' \
+		-L. $(EXE_RPATH) \
 		-L$(VSDNANO) -Wl,-rpath,$(VSDNANO) \
-		-Wl,--no-as-needed \
+		$(NO_AS_NEEDED) \
 		-lNanoClassesEvd \
 		-lCmsNanoAod \
 		-lVsdDict \
@@ -98,9 +114,9 @@ evd: evd.cxx NanoProvider.h libNanoClassesEvd.so $(VSDNANO)/libVsdDict.so $(VSDN
 serviceVSDMama: serviceVSDMama.cc NanoProvider.h libNanoClassesEvd.so $(VSDNANO)/libVsdDict.so $(VSDNANO)/libFWDict.so $(VSDNANO)/FWService.h
 	$(CXX) $(CPPFLAGS) -I$(VSDNANO) $(CXXFLAGS) -DVSDNANO_DIR='"$(VSDNANO)"' -o $@ \
 		serviceVSDMama.cc \
-		-L. -Wl,-rpath,'$$ORIGIN' \
+		-L. $(EXE_RPATH) \
 		-L$(VSDNANO) -Wl,-rpath,$(VSDNANO) \
-		-Wl,--no-as-needed \
+		$(NO_AS_NEEDED) \
 		-lNanoClassesEvd \
 		-lCmsNanoAod \
 		-lVsdDict \
@@ -121,20 +137,20 @@ TestPrint.o: TestPrint.cxx
 
 
 libNanoClassesPrint.so: CmsNanoClasses.o CmsNanoClasses_dict.o libCmsNanoAod.so
-	$(CXX) -shared -o $@ \
+	$(CXX) -shared $(SONAME) -o $@ \
 	    CmsNanoClasses.o \
 	    CmsNanoClasses_dict.o \
-	    -L. -Wl,-rpath,'$$ORIGIN' \
+	    -L. $(EXE_RPATH) \
 	    -lCmsNanoAod \
 	    $(shell root-config --libs)
 
 amtprint: TestPrint.o libNanoClassesPrint.so
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ \
 	    TestPrint.o \
-	    -L. -Wl,-rpath,'$$ORIGIN' \
-	    -Wl,--no-as-needed \
+	    -L. $(EXE_RPATH) \
+	    $(NO_AS_NEEDED) \
 	    -lNanoClassesPrint \
-	    -Wl,--as-needed \
+	    $(AS_NEEDED) \
 	    -lCmsNanoAod \
 	    $(shell root-config --libs)
 
