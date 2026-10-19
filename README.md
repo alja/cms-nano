@@ -159,6 +159,29 @@ The reply gives the port and path of the new display, e.g. `{ 'port'=>10074, 'di
 
 The default table columns are set in `NanoProvider::SetupTables()` in `NanoProvider.h`. Columns can also be added in the GUI with "Edit Collection Columns".
 
+## Synthetic jet tracks
+
+`JetProxyBuilder` also draws plausible charged-particle tracks (gray) inside
+each jet. They are generated, not reconstructed: Pythia 8 showers and
+hadronizes a q qbar or g g pair (chosen by the quark/gluon score or MC
+flavour), FastJet picks the jet, and its constituents are matched to the
+NanoAOD jet pT, eta and phi. Generation takes about 0.1 ms per jet, and the jet
+seeds the random generator, so a jet always gets the same tracks. See
+`SynthTracks.h`.
+
+Switch them off with the `SynthTracks` checkbox in the Jet collection editor,
+and set their color with `SynthTrackColor` (a ROOT color index: 922 gray, the
+default, 1 black, 616 magenta), or in the config:
+
+```json
+{ "name": "Jet", "proxyBuilder": "nanoaod::JetProxyBuilder<nanoaod::Jet>", "color": 400,
+  "var": [ { "name": "SynthTracks", "type": "Bool", "val": true },
+           { "name": "SynthTrackColor", "type": "Long", "val": 616 } ] }
+```
+
+The generator is `libSynthJetGen.so` from `~/cms-dev/syntGen` (set `SYNTHGEN`
+to change it), which needs Pythia 8 and FastJet. `make` builds it if missing.
+
 ## Make targets
 
 | Target    | What it does |

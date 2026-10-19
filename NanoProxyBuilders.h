@@ -17,11 +17,14 @@
 #include <ROOT/REveTableInfo.hxx>
 #include <ROOT/REveTrack.hxx>
 #include <ROOT/REveTrackPropagator.hxx>
+#include <ROOT/REveTrackProjected.hxx>
 #include <ROOT/REveViewer.hxx>
 #include <ROOT/REveViewContext.hxx>
 #include <ROOT/REveBox.hxx>
 #include <ROOT/REvePointSet.hxx>
 #include "CmsNanoClasses.hxx"
+#include "FWDataCollection.h"
+#include "SynthTracks.h"
 
 #include "TParticle.h"
 
@@ -146,6 +149,67 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
    };
 
    bool HaveSingleProduct() const override { return false; }
+
+   // GUI parameter of the jet collection: draw synthetic charged tracks
+   // (Pythia 8 constituents, see SynthTracks.h) inside each jet.
+   static constexpr const char *kSynthTracks = "SynthTracks";
+   // ROOT color index of the synthetic tracks, e.g. 922 gray, 1 black, 616 magenta.
+   // Not green: that is the selection highlight.
+   static constexpr const char *kSynthTrackColor = "SynthTrackColor";
+
+   // Depth in the 2D projections (evd_main.cc: geometry -4, event objects 0).
+   // Jet cones and energy boxes are drawn behind the synthetic tracks, which
+   // stay behind the reconstructed muons and electrons.
+   static constexpr int   kJetLayer = -2;
+   static constexpr float kSynthTrackDepth = -1;
+
+   using REveDataProxyBuilderBase::SetCollection;
+   void SetCollection(REveDataCollection *collection) override
+   {
+      REveDataProxyBuilderBase::SetCollection(collection);
+      // The projection manager uses the layer as the current depth when
+      // projecting this collection's items.
+      collection->SetLayer(kJetLayer);
+      if (auto fwc = dynamic_cast<FWDataCollection *>(collection))
+      {
+         fwc->assertParameter(kSynthTracks, true);
+         fwc->assertParameter(kSynthTrackColor, long(kGray + 2));
+      }
+   }
+
+   // The whole jet item is projected at kJetLayer; move the projected
+   // synthetic tracks in front of it.
+   using REveDataProxyBuilderBase::Build;
+   void Build() override
+   {
+      REveDataProxyBuilderBase::Build();
+      for (auto *pp : this->m_products)
+         if (auto pable = dynamic_cast<REveProjectable *>(pp->m_elements))
+            for (auto *proj : pable->RefProjecteds())
+               raiseSynthTracks(proj->GetProjectedAsElement());
+   }
+
+   static void raiseSynthTracks(REveElement *el)
+   {
+      for (auto *c : el->RefChildren())
+      {
+         if (auto tp = dynamic_cast<REveTrackProjected *>(c))
+         {
+            tp->SetDepth(kSynthTrackDepth);
+            tp->UpdateProjection();
+         }
+         else
+         {
+            raiseSynthTracks(c);
+         }
+      }
+   }
+
+   bool drawSynthTracks()
+   {
+      auto fwc = dynamic_cast<FWDataCollection *>(this->Collection());
+      return fwc && fwc->getBoolParameter(kSynthTracks);
+   }
 
    void makeBarrelCell( Cell &cellData, float &offset , float towerH, float *pnts)
    {
@@ -340,7 +404,17 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
             reveBox->SetTitle(Form("jet %d", idx)); // amt this is workaround and should be unnecessary
          }
       }
-      
+
+      if (drawSynthTracks())
+      {
+         auto fwc = dynamic_cast<FWDataCollection *>(this->Collection());
+         Color_t color = Color_t(fwc->getLongParameter(kSynthTrackColor));
+         for (auto track : MakeSynthTracks(dj, context->GetPropagator()))
+         {
+            track->SetMainColor(color);
+            this->SetupAddElement(track, iItemHolder, false);
+         }
+      }
    }
 
 

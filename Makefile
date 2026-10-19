@@ -8,6 +8,11 @@ CONFIG   ?= cmap.json
 # VSDNano provides the event display: managers, views and GUI (ui5/, data/)
 VSDNANO  ?= $(HOME)/root-dev/VSDNano
 
+# Synthetic jet tracks (Pythia 8 + FastJet) drawn by JetProxyBuilder, see SynthTracks.h.
+# libSynthJetGen.so is built in its own directory: make -C $(SYNTHGEN) libSynthJetGen.so
+SYNTHGEN ?= $(HOME)/cms-dev/syntGen
+CPPFLAGS += -I$(SYNTHGEN) -I$(VSDNANO)
+
 # Platform linker options. macOS: libraries are found through @rpath and
 # there is no --(no-)as-needed.
 UNAME ?= $(shell uname -s)
@@ -78,20 +83,24 @@ EvdGuiLinkDef.h: $(CONFIG)
 	  '.collections[] | select(has("proxyBuilder")) | "#pragma link C++ class \(.proxyBuilder)-!;"' \
 	  $< > $@
 
-EvdGui_dict.cxx: NanoProxyBuilders.h CmsNanoClasses.hxx EvdGuiLinkDef.h
+EvdGui_dict.cxx: NanoProxyBuilders.h SynthTracks.h $(SYNTHGEN)/SynthJetGen.h CmsNanoClasses.hxx EvdGuiLinkDef.h
 	@rm -f EvdGui_dict.cxx
-	rootcling -f EvdGui_dict.cxx NanoProxyBuilders.h EvdGuiLinkDef.h
+	rootcling -f EvdGui_dict.cxx -I$(SYNTHGEN) -I$(VSDNANO) NanoProxyBuilders.h EvdGuiLinkDef.h
 
 
 EvdGui_dict.o: EvdGui_dict.cxx
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fPIC -c $<
 
-libNanoClassesEvd.so: CmsNanoClasses.o CmsNanoClasses_dict.o EvdGui_dict.o libCmsNanoAod.so
+$(SYNTHGEN)/libSynthJetGen.so:
+	$(MAKE) -C $(SYNTHGEN) libSynthJetGen.so
+
+libNanoClassesEvd.so: CmsNanoClasses.o CmsNanoClasses_dict.o EvdGui_dict.o libCmsNanoAod.so $(SYNTHGEN)/libSynthJetGen.so
 	$(CXX) -shared $(SONAME) -o $@ \
 		CmsNanoClasses.o \
 		CmsNanoClasses_dict.o \
 		EvdGui_dict.o \
 		-L. -lCmsNanoAod \
+		-L$(SYNTHGEN) -Wl,-rpath,$(SYNTHGEN) -lSynthJetGen \
 		-lEG -lGeom -lROOTWebDisplay -lROOTEve \
 		$(shell root-config --libs)
 
