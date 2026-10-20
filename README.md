@@ -11,7 +11,6 @@ cms-nano reads NanoAOD directly: it generates one C++ class per collection from 
 - ROOT built from the `master` branch, with `root7`, `webgui` and `http` enabled (see below)
 - A C++17 compiler (GCC or Clang)
 - [nlohmann/json](https://github.com/nlohmann/json) headers (Fedora: `json-devel`, Debian/Ubuntu: `nlohmann-json3-dev`)
-- `jq`, which the Makefile uses to generate the proxy-builder LinkDef from the config
 - A checkout of [VSDNano](https://github.com/alja/VSDNano), branch `fw-provider` (see below)
 - A web browser to view the display
 
@@ -62,18 +61,17 @@ A clean build takes about a minute with `-j`. Most of it is compiling the ROOT d
 The build has four steps:
 
 1. `libCmsNanoAod.so`: generic NanoAOD reading code.
-2. `gen-classes` reads the data file and the config, and generates `CmsNanoClasses.hxx/.cxx`, one class per collection.
-3. `libNanoClassesEvd.so`: the generated classes and the proxy builders named in the config.
+2. `gen-classes` reads the data file and the config, and generates `CmsNanoClasses.hxx/.cxx`, one class per collection, and the LinkDef for their proxy builders. Collections in the config that the data file does not have get no class; `gen-classes` says so.
+3. `libNanoClassesEvd.so`: the generated classes and their proxy builders.
 4. `evd`: `NanoProvider` plus VSDNano's event display, linked against VSDNano's `libVsdDict.so` and `libFWDict.so`.
 
-The generated classes depend on the collections in the config and on the data file's branches, but `make` does not track either. After adding or removing collections in the config, or to switch to a file with a different layout, rebuild from scratch:
+The generated classes depend on the data file and the config. `make` records both in `.gen_config` and regenerates the classes when either changes, so switching needs no `make clean`:
 
 ```bash
-make clean
 make -j$(nproc) evd ROOTFILE=/path/to/other_nano.root CONFIG=my_config.json
 ```
 
-The generated accessors read branches by position, not by name: `Jet::pt()` returns the Nth `Jet_*` leaf of the file. A file whose branches for a configured collection differ from the file the classes were generated from (one branch added, removed or reordered) loads without an error but shows wrong values. Files from the same release and data-taking era usually have the same layout; files from other releases often do not.
+One build can open files with other layouts. The generated accessors find their branches by name in each file that is opened: a member the file does not have reads as 0, and one stored with another type is converted. A collection that the file does not have, or that has no compiled-in class, is left out of the display. `evd` prints a line for each, e.g. `Collection Jet: 45 of 68 members not in this file (read as 0), 10 with a different type (converted).` To see a collection, such as `GenPart`, build with a data file that has it.
 
 After upgrading ROOT, run `make clean` before rebuilding, and also `make clean` in VSDNano: its C++ modules must match the ROOT build.
 
@@ -130,7 +128,7 @@ echo '{"action": "load", "file": "/path/to/nano.root", "config": "/path/to/cmap.
        "user": "me", "logdir": "/tmp/logs", "logdirurl": "file:///tmp/logs/"}' | nc localhost 5556
 ```
 
-The reply gives the port and path of the new display, e.g. `{ 'port'=>10074, 'dir'=>'win1/?token=...', 'key'=>'...', 'log_fname'=>'...' }`, or `'error'` if the file or config can't be used. Starting a display takes about 8 s. `"config"` can be a path or the config itself as a JSON object; its collections must be among those the service was built with. `{"action": "stop_server"}` stops the service.
+The reply gives the port and path of the new display, e.g. `{ 'port'=>10074, 'dir'=>'win1/?token=...', 'key'=>'...', 'log_fname'=>'...' }`, or `'error'` if the file or config can't be used. Starting a display takes about 8 s. `"config"` can be a path or the config itself as a JSON object; collections that the file does not have, or the service was not built with, are left out, see the session log. `{"action": "stop_server"}` stops the service.
 
 ## Data
 
@@ -156,6 +154,7 @@ The reply gives the port and path of the new display, e.g. `{ 'port'=>10074, 'di
 - `filter` is optional: a filter expression on the item `i`, using any generated accessor.
 - `var` is optional: proxy-builder parameters shown in the GUI, in VSDNano's format (see `FWDataCollection.h` there).
 - `EventInfo` is loaded but not shown as a collection.
+- A collection that is not in the data file is skipped, so one config serves files with and without it. `GenPart` (generator particles, drawn by `nanoaod::CandidateProxyBuilder`) is only in simulated samples, not in `BTag_100.root`.
 
 The default table columns are set in `NanoProvider::SetupTables()` in `NanoProvider.h`. Columns can also be added in the GUI with "Edit Collection Columns".
 

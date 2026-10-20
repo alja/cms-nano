@@ -29,6 +29,8 @@
 #endif
 
 #include "TParticle.h"
+#include "TDatabasePDG.h"
+#include "TParticlePDG.h"
 
 // Proxy builders for the generated NanoAOD classes. They are templates on the
 // item class, instantiated in EvdGuiLinkDef.h from the proxyBuilder entries in
@@ -535,6 +537,74 @@ public:
       // float value = met.et();
       float value = met.pt();
       marker->SetScale(energyScale * value);
+   }
+};
+
+//==============================================================================
+// Generic candidate, e.g. GenPart: a track from the production vertex, as
+// VSDNano's CandidateProxyBuilder draws VsdCandidate. The vertex and the charge
+// are taken from the item when its class has them, depending on the NanoAOD
+// version the classes were generated from.
+
+namespace cand_detail
+{
+#define CAND_HAS(NAME)                                                                   \
+   template <class T, class = void>                                                      \
+   struct has_##NAME : std::false_type {};                                               \
+   template <class T>                                                                    \
+   struct has_##NAME<T, std::void_t<decltype(std::declval<T &>().NAME())>> : std::true_type {};
+
+CAND_HAS(charge)
+CAND_HAS(pdgId)
+CAND_HAS(vx)
+#undef CAND_HAS
+} // namespace cand_detail
+
+template<typename T>
+class CandidateProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
+{
+   // Sign of the charge: from charge(), else from the PDG id, else neutral.
+   static int chargeSign(T &c)
+   {
+      if constexpr (cand_detail::has_charge<T>::value)
+      {
+         return (c.charge() > 0) - (c.charge() < 0);
+      }
+      else if constexpr (cand_detail::has_pdgId<T>::value)
+      {
+         TParticlePDG *p = TDatabasePDG::Instance()->GetParticle(int(c.pdgId()));
+         if (!p)
+            return 0;
+         return (p->Charge() > 0) - (p->Charge() < 0);
+      }
+      else
+      {
+         return 0;
+      }
+   }
+
+   using REveDataSimpleProxyBuilderTemplate<T>::BuildItem;
+   void BuildItem(const T& c_cand, int /*idx*/, REveElement* iItemHolder, const REveViewContext* context) override
+   {
+      T& cand = (T&)(c_cand);
+
+      float theta = EtaToTheta(cand.eta());
+      float pz = cand.pt() / TMath::Tan(theta);
+      float px = cand.pt() * TMath::Cos(cand.phi());
+      float py = cand.pt() * TMath::Sin(cand.phi());
+
+      REveRecTrack t;
+      t.fBeta = 1.;
+      if constexpr (cand_detail::has_vx<T>::value)
+         t.fV = REveVector(cand.vx(), cand.vy(), cand.vz());
+      else
+         t.fV = REveVector(0, 0, 0);
+      t.fP = REveVector(px, py, pz);
+      t.fSign = chargeSign(cand);
+
+      auto track = new REveTrack(&t, context->GetPropagator());
+      track->MakeTrack();
+      this->SetupAddElement(track, iItemHolder, true);
    }
 };
 

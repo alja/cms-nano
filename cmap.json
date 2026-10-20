@@ -26,6 +26,12 @@
         "color": 600
       },
       {
+        "name": "GenPart",
+        "proxyBuilder": "nanoaod::CandidateProxyBuilder<nanoaod::GenPart>",
+        "color": 617,
+        "filter": "i.pt() > 0.5"
+      },
+      {
         "name": "HLT"
       }
     ]
