@@ -24,6 +24,10 @@
 #include "CmsNanoClasses.hxx"
 
 #include "TParticle.h"
+#include "TRandom3.h"
+
+#include <algorithm>
+#include <vector>
 
 // Proxy builders for the generated NanoAOD classes. They are templates on the
 // item class, instantiated in EvdGuiLinkDef.h from the proxyBuilder entries in
@@ -278,6 +282,56 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
 
    } // end makeEndCapCell
 
+   // NanoAOD has no tracks. Draw chMultiplicity() made-up charged pions from the
+   // origin, sharing the jet's charged hadron pt, pt * chHEF(), with directions
+   // spread around the jet axis. The random generator is seeded from the jet, so
+   // every view and every redraw of the event shows the same tracks.
+   void makeSyntheticTracks(T &dj, REveElement *iItemHolder, const REveViewContext *context)
+   {
+      static const int   kMaxTracks = 30;
+      static const float kSpread    = 0.1;  // sigma of eta and phi around the axis
+      static const float kMaxDR     = 0.4;  // AK4 jet radius
+      static const float kMinPt     = 0.5;  // GeV, softer tracks just curl up
+
+      int   n         = std::min(int(dj.chMultiplicity()), kMaxTracks);
+      float chargedPt = dj.pt() * dj.chHEF();
+      if (n == 0 || chargedPt < kMinPt)
+         return;
+
+      TRandom3 rnd(UInt_t(dj.pt() * 1000) ^ (UInt_t((dj.eta() + 10) * 1000) << 12) ^ UInt_t((dj.phi() + 10) * 1000));
+
+      // pt fractions, exponentials normalized to one
+      std::vector<float> frac(n);
+      float sum = 0;
+      for (auto &f : frac)
+         sum += (f = rnd.Exp(1));
+
+      for (int i = 0; i < n; ++i)
+      {
+         float pt = chargedPt * frac[i] / sum;
+         if (pt < kMinPt)
+            continue;
+
+         float deta, dphi;
+         do {
+            deta = rnd.Gaus(0, kSpread);
+            dphi = rnd.Gaus(0, kSpread);
+         } while (deta * deta + dphi * dphi > kMaxDR * kMaxDR);
+
+         float theta = EtaToTheta(dj.eta() + deta);
+         float phi   = dj.phi() + dphi;
+
+         REveRecTrackD rt;
+         rt.fV.Set(0, 0, 0);
+         rt.fP.Set(pt * TMath::Cos(phi), pt * TMath::Sin(phi), pt / TMath::Tan(theta));
+         rt.fSign = rnd.Rndm() < 0.5 ? -1 : 1;
+
+         auto track = new REveTrack(&rt, context->GetPropagator());
+         track->MakeTrack();
+         this->SetupAddElement(track, iItemHolder, true);
+      }
+   }
+
 
    using REveDataSimpleProxyBuilderTemplate<T>::BuildItemViewType;
    void BuildItemViewType(const T& cdj, int idx, REveElement* iItemHolder,
@@ -290,7 +344,9 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
       this->SetupAddElement(jet, iItemHolder, true);
       jet->SetTitle(Form("jet %d", idx));
       printf("make jet %d\n", idx);
-      
+
+      makeSyntheticTracks(dj, iItemHolder, context);
+
       
       static const float_t offr = 5;
       float r_ecal = context->GetMaxR() + offr;
