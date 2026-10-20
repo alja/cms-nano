@@ -5,8 +5,8 @@
 //   { "action": "load", "file": "<NanoAOD file>", "config": "<config.json>",
 //     "user": "...", "logdir": "...", "logdirurl": "..." }
 // "config" is the path of a collection config like cmap.json, or the config
-// itself as a JSON object. Its collections must be among the ones the classes
-// in libNanoClassesEvd.so were generated for.
+// itself as a JSON object. Collections that are not in the file, or have no
+// class in libNanoClassesEvd.so, are left out (see the session log).
 
 #include "NanoProvider.h"
 #include "FWService.h"
@@ -49,18 +49,6 @@ protected:
             return nullptr;
          }
          in >> config;
-      }
-
-      // the generated classes are compiled in, so the config can only use those
-      for (const auto &c : config["collections"])
-      {
-         std::string cls = "nanoaod::" + c["name"].get<std::string>();
-         TClass *tc = TClass::GetClass(cls.c_str());
-         if (!tc || !tc->HasDictionary())
-         {
-            error = "No generated class " + cls + ", rebuild with this config.";
-            return nullptr;
-         }
       }
 
       std::unique_ptr<TFile> f(TFile::Open(dataPath.c_str()));

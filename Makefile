@@ -42,7 +42,7 @@ endif
 #===============================================================================
 #================= CORE ========================================================
 #===============================================================================
-CmsNanoAod.o: CmsNanoAod.cxx
+CmsNanoAod.o: CmsNanoAod.cxx CmsNanoAod.hxx
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fPIC -c $<
 
 
@@ -62,16 +62,25 @@ libCmsNanoAod.so: CmsNanoAod.o CmsNanoAod_dict.o
 #=================== GEN nanoaod CLASSES =======================================
 #===============================================================================
 
-gen-classes: libCmsNanoAod.so
+gen-classes: TestBootstrap.cxx libCmsNanoAod.so
 	$(CXX) ${CPPFLAGS} ${CXXFLAGS} -o $@ TestBootstrap.cxx \
 		-L. $(EXE_RPATH) \
 		-lCmsNanoAod $(shell root-config --libs)
 
-CmsNanoClasses.cxx: gen-classes
+# The classes depend on the data file and the config, so they are regenerated
+# when either changes, see .gen_config.
+CmsNanoClasses.cxx: gen-classes .gen_config
 	./gen-classes $(ROOTFILE) --fconfig $(CONFIG)
 
-# gen-classes writes the header too
-CmsNanoClasses.hxx: CmsNanoClasses.cxx ;
+# gen-classes writes the header and both LinkDefs too: EvdNanoClassesLinkDef.h
+# for the classes and EvdGuiLinkDef.h for the proxy builders of the
+# collections found in the data file.
+CmsNanoClasses.hxx EvdNanoClassesLinkDef.h EvdGuiLinkDef.h: CmsNanoClasses.cxx ;
+
+# Records the data file and the config contents, rewritten only when they
+# change, so that switching ROOTFILE or CONFIG regenerates the classes.
+.gen_config: FORCE
+	@{ echo "$(ROOTFILE)"; cat $(CONFIG); } | cmp -s - $@ || { echo "$(ROOTFILE)"; cat $(CONFIG); } > $@
 
 
 CmsNanoClasses_dict.cxx: CmsNanoClasses.hxx
@@ -88,11 +97,6 @@ CmsNanoClasses_dict.o: CmsNanoClasses_dict.cxx CmsNanoClasses.hxx
 #===============================================================================
 #=================== VISUALIZATION  ============================================
 #===============================================================================
-
-EvdGuiLinkDef.h: $(CONFIG)
-	jq -r \
-	  '.collections[] | select(has("proxyBuilder")) | "#pragma link C++ class \(.proxyBuilder)-!;"' \
-	  $< > $@
 
 EvdGui_dict.cxx: NanoProxyBuilders.h SynthTracks.h CmsNanoClasses.hxx EvdGuiLinkDef.h .synth_config
 	@rm -f EvdGui_dict.cxx
@@ -188,7 +192,8 @@ amtprint: TestPrint.o libNanoClassesPrint.so
 #===============================================================================
 
 clean:
-	rm -f .synth_config
+	rm -f .synth_config .gen_config
+	rm -f EvdNanoClassesLinkDef.h
 	rm -rf EvdGuiLinkDef.h
 	rm -rf libCmsNanoAod.so CmsNanoAod_dict* CmsNanoAod.o
 	rm -rf CmsNanoAod_cxx.d CmsNanoAod_cxx_ACLiC_dict_rdict.pcm CmsNanoAod_cxx.so

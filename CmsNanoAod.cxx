@@ -50,6 +50,7 @@ bool MamaCollection::consider_leaf(TLeaf *l)
 
       m_num_ents_leaf = l;
       m_max_ents      = l->GetMaximum();
+      m_present       = true;
       return true;
    }
 
@@ -60,11 +61,44 @@ bool MamaCollection::consider_leaf(TLeaf *l)
       m_members.push_back( DataMember(m_data_re[1].Data(), l, m_max_ents) );
 
       ++m_num_datas;
+      m_present = true;
 
       return true;
    }
 
    return false;
+}
+
+void MamaCollection::set_schema(std::vector<SchemaEntry> schema)
+{
+   m_schema = std::move(schema);
+   m_slot_member.assign(m_schema.size(), -1);
+   m_slot_convert.assign(m_schema.size(), false);
+
+   std::map<std::string, int> by_name;
+   for (int i = 0; i < (int) m_members.size(); ++i)
+      by_name[m_members[i].m_name] = i;
+
+   int n_missing = 0, n_converted = 0;
+   for (int s = 0; s < (int) m_schema.size(); ++s)
+   {
+      auto it = by_name.find(m_schema[s].m_name);
+      if (it == by_name.end())
+      {
+         ++n_missing;
+         continue;
+      }
+      m_slot_member[s] = it->second;
+      if (m_schema[s].m_type != m_members[it->second].get_type())
+      {
+         m_slot_convert[s] = true;
+         ++n_converted;
+      }
+   }
+
+   if (n_missing || n_converted)
+      printf("Collection %s: %d of %d members not in this file (read as 0), %d with a different type (converted).\n",
+             m_class_name.c_str(), n_missing, (int) m_schema.size(), n_converted);
 }
 
 void MamaCollection::print_class(FILE *fp)
@@ -80,20 +114,40 @@ void MamaCollection::print_class(FILE *fp)
            m_class_name.c_str()
            );
 
+   // Members are read through slots, matched by name to the leaves of the
+   // file that is opened (see MamaCollection::set_schema).
    int mi = 0;
    for (auto &m : m_members)
    {
-      fprintf(fp, "   %s %s() { return m_mama.data_member(%d).get_value<%s>(m_seq_idx); }\n",
-              m.get_type(), m.get_name(), mi, m.get_type());
+      fprintf(fp, "   %s %s() const { return m_mama.value<%s>(%d, m_seq_idx); }\n",
+              m.get_type(), m.get_name(), m.get_type(), mi);
       ++mi;
 
    }
    fprintf(fp, "};\n");
 }
 
+// Member names and types in slot order, as initializer list entries.
+void MamaCollection::print_schema(FILE *fp)
+{
+   bool first = true;
+   for (auto &m : m_members)
+   {
+      fprintf(fp, "%s{\"%s\", \"%s\"}", first ? "" : ", ", m.get_name(), m.get_type());
+      first = false;
+   }
+}
+
 void MamaCollection::goto_event(Long64_t ev)
 {
    m_event = ev;
+
+   // not in this file or not compiled in: no items
+   if ( ! is_usable())
+   {
+      m_entries = 0;
+      return;
+   }
 
    if (m_max_ents > -1)
    {
@@ -158,6 +212,7 @@ void Event::autogen_linkdef()
    FILE *fp = fopen("EvdNanoClassesLinkDef.h", "w");
    for (auto& mc : m_mama_colls)
    {
+      if ( ! mc.is_present()) continue;
       const char *cn = mc.get_class_name().c_str();
       fprintf(fp, "#pragma link C++ class nanoaod::%s-!;\n", cn);
    }
@@ -177,6 +232,7 @@ void Event::autogen_nano_classes()
 
    for (auto& mc : m_mama_colls)
    {
+      if ( ! mc.is_present()) continue;
       mc.print_class(fp);
       fprintf(fp, "\n");
    }
@@ -202,6 +258,7 @@ void Event::autogen_nano_classes()
 
    for (auto& mc : m_mama_colls)
    {
+      if ( ! mc.is_present()) continue;
       const char *cn = mc.get_class_name().c_str();
 
       fprintf(fp,
@@ -211,10 +268,13 @@ void Event::autogen_nano_classes()
               "      mc.m_item_ctor  = [](MamaCollection& m, int idx) { return new %s(m, idx); };\n"
               "      mc.m_item_dtor  = [](void* item) { delete (%s*) item; };\n"
               "      mc.m_item_class = TClass::GetClass<%s>();\n"
-              "   }\n"
-              "   else",
+              "      mc.set_schema({",
               cn, cn, cn, cn
               );
+      mc.print_schema(fp);
+      fprintf(fp, "});\n"
+                  "   }\n"
+                  "   else");
    }
    fprintf(fp, "\n   {\n      throw std::runtime_error(mc.get_class_name() + \" unknown class name\");\n   }\n");
 
@@ -262,22 +322,19 @@ void Event::UseTree(TTree *tree)
    }
    md5.Final();
 
-   TMD5 *md5_on_file = TMD5::ReadChecksum("CmsNanoClasses.md5");
-
-   if ( ! md5_on_file || strcmp(md5.AsString(), md5_on_file->AsString()) != 0)
+   for (auto& mc : m_mama_colls)
    {
-      printf("Regenerating nano classes ...\n");
-
-      autogen_linkdef();
-      autogen_nano_classes();
-      TMD5::WriteChecksum("CmsNanoClasses.md5", &md5);
-   }
-   else
-   {
-      printf("Reusing existing nano classes ...\n");
+      if ( ! mc.is_present())
+         printf("Collection %s is not in this file, no class is generated for it.\n", mc.get_class_name().c_str());
    }
 
-   delete md5_on_file;
+   // The Makefile reruns this only when the data file or the config change,
+   // so always regenerate. The checksum of the leaf layout is kept for reference.
+   printf("Generating nano classes ...\n");
+
+   autogen_linkdef();
+   autogen_nano_classes();
+   TMD5::WriteChecksum("CmsNanoClasses.md5", &md5);
 
 }
 
@@ -313,7 +370,21 @@ void Event::LoadFile(const std::string& file_name,  const std::string& tree_name
 
    for (auto& mc : m_mama_colls)
    {
-      s_setup_mama_for_type(mc);
+      if ( ! mc.is_present())
+      {
+         printf("Collection %s is not in this file, it is not shown.\n", mc.get_class_name().c_str());
+         continue;
+      }
+      try
+      {
+         s_setup_mama_for_type(mc);
+      }
+      catch (std::exception &)
+      {
+         printf("Collection %s is not in the compiled classes, it is not shown. "
+                "Rebuild with a data file that has it, e.g. make evd ROOTFILE=<file>.\n",
+                mc.get_class_name().c_str());
+      }
    }
 }
 

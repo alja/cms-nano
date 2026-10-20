@@ -16,7 +16,8 @@
 // The collections come from the config (cmap.json):
 //   { "name": "Jet", "proxyBuilder": "nanoaod::JetProxyBuilder<nanoaod::Jet>",
 //     "color": 632, "filter": "i.pt() > 20", "var": [ ... ] }
-// "proxyBuilder", "color", "filter" and "var" are optional.
+// "proxyBuilder", "color", "filter" and "var" are optional. Collections that
+// are not in the data file, or have no compiled-in class, are left out.
 class NanoProvider : public FWProvider
 {
    nanoaod::Event m_event;
@@ -75,6 +76,8 @@ public:
          std::string name = c["name"];
          if (name == "EventInfo")
             continue;
+         if ( ! m_event.RefColl(name).is_usable())
+            continue; // LoadFile() printed why
 
          FWCollectionSpec s;
          s.m_name = name;

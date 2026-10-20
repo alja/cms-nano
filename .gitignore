@@ -2,3 +2,8 @@
 external/
 # records the SYNTH setting of the last build
 .synth_config
+# records ROOTFILE and the config of the last class generation
+.gen_config
+# written by gen-classes
+EvdGuiLinkDef.h
+EvdNanoClassesLinkDef.h
