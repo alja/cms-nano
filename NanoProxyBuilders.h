@@ -169,6 +169,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
       {
          fwc->assertParameter(kSynthTracks, true);
          fwc->assertParameter(kSynthTrackColor, long(kGray + 2));
+         fwc->assertParameter(kSynthTrackMinPt, 0., 0., 1000.);
       }
 #endif
    }
@@ -180,6 +181,8 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
    // ROOT color index of the synthetic tracks, e.g. 922 gray, 1 black, 616 magenta.
    // Not green: that is the selection highlight.
    static constexpr const char *kSynthTrackColor = "SynthTrackColor";
+   // Synthetic tracks with lower pt (GeV) are not drawn.
+   static constexpr const char *kSynthTrackMinPt = "SynthTrackMinPt";
 
    static constexpr float kSynthTrackDepth = -1;
 
@@ -417,7 +420,8 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
       {
          auto fwc = dynamic_cast<FWDataCollection *>(this->Collection());
          Color_t color = Color_t(fwc->getLongParameter(kSynthTrackColor));
-         for (auto track : MakeSynthTracks(dj, context->GetPropagator()))
+         double minPt = fwc->getDoubleParameter(kSynthTrackMinPt);
+         for (auto track : MakeSynthTracks(dj, context->GetPropagator(), minPt))
          {
             track->SetMainColor(color);
             this->SetupAddElement(track, iItemHolder, false);

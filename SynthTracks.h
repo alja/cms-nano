@@ -68,9 +68,10 @@ synth::JetSpec MakeJetSpec(T &j)
    return s;
 }
 
-// Charged synthetic tracks of one jet, starting at the origin.
+// Charged synthetic tracks of one jet with pt >= minPt (GeV), starting at the origin.
 template <class T>
-std::vector<ROOT::Experimental::REveTrack *> MakeSynthTracks(T &jet, ROOT::Experimental::REveTrackPropagator *prop)
+std::vector<ROOT::Experimental::REveTrack *> MakeSynthTracks(T &jet, ROOT::Experimental::REveTrackPropagator *prop,
+                                                            double minPt = 0)
 {
    using namespace ROOT::Experimental;
 
@@ -80,14 +81,15 @@ std::vector<ROOT::Experimental::REveTrack *> MakeSynthTracks(T &jet, ROOT::Exper
    std::vector<REveTrack *> tracks;
    for (const auto &p : res.particles)
    {
-      if (p.charge == 0)
+      double pt = std::hypot(p.px, p.py);
+      if (p.charge == 0 || pt < minPt)
          continue;
       REveRecTrackD rt;
       rt.fV.Set(0., 0., 0.);
       rt.fP.Set(p.px, p.py, p.pz);
       rt.fSign = p.charge > 0 ? 1 : -1;
       auto track = new REveTrack(&rt, prop);
-      track->SetTitle(Form("synthetic pdg %d, pt %.2f GeV", p.pdgId, std::hypot(p.px, p.py)));
+      track->SetTitle(Form("synthetic pdg %d, pt %.2f GeV", p.pdgId, pt));
       track->MakeTrack();
       tracks.push_back(track);
    }

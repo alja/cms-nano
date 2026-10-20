@@ -170,13 +170,15 @@ seeds the random generator, so a jet always gets the same tracks. See
 `SynthTracks.h`.
 
 Switch them off with the `SynthTracks` checkbox in the Jet collection editor,
-and set their color with `SynthTrackColor` (a ROOT color index: 922 gray, the
-default, 1 black, 616 magenta), or in the config:
+set their color with `SynthTrackColor` (a ROOT color index: 922 gray, the
+default, 1 black, 616 magenta), and hide the softer ones with `SynthTrackMinPt`
+(GeV, default 0: all tracks), or in the config:
 
 ```json
 { "name": "Jet", "proxyBuilder": "nanoaod::JetProxyBuilder<nanoaod::Jet>", "color": 400,
   "var": [ { "name": "SynthTracks", "type": "Bool", "val": true },
-           { "name": "SynthTrackColor", "type": "Long", "val": 616 } ] }
+           { "name": "SynthTrackColor", "type": "Long", "val": 616 },
+           { "name": "SynthTrackMinPt", "type": "Double", "val": 1.0 } ] }
 ```
 
 The generator is `libSynthJetGen.so` in [syntGen](syntGen/) (set `SYNTHGEN` to
