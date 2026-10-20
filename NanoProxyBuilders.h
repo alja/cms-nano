@@ -169,7 +169,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
       {
          fwc->assertParameter(kSynthTracks, true);
          fwc->assertParameter(kSynthTrackColor, long(kGray + 2));
-         fwc->assertParameter(kSynthTrackMinPt, 0., 0., 1000.);
+         fwc->assertParameter(kSynthTrackMinPt, 1., 0., 1000.);
       }
 #endif
    }
