@@ -170,7 +170,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
       if (auto fwc = dynamic_cast<FWDataCollection *>(collection))
       {
          fwc->assertParameter(kSynthTracks, true);
-         fwc->assertParameter(kSynthTrackColor, long(kGray));
+         fwc->assertColorParameter(kSynthTrackColor, Color_t(kGray + 2));
          fwc->assertParameter(kSynthTrackMinPt, 1., 0., 1000.);
       }
 #endif
@@ -180,7 +180,7 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
    // GUI parameter of the jet collection: draw synthetic charged tracks
    // (Pythia 8 constituents, see SynthTracks.h) inside each jet.
    static constexpr const char *kSynthTracks = "SynthTracks";
-   // ROOT color index of the synthetic tracks, e.g. 920 light gray, 922 gray, 1 black, 616 magenta.
+   // ROOT color index of the synthetic tracks, e.g. 922 dark gray, 920 light gray, 1 black, 616 magenta.
    // Not green: that is the selection highlight.
    static constexpr const char *kSynthTrackColor = "SynthTrackColor";
    // Synthetic tracks with lower pt (GeV) are not drawn.

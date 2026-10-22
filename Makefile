@@ -98,7 +98,7 @@ CmsNanoClasses_dict.o: CmsNanoClasses_dict.cxx CmsNanoClasses.hxx
 #=================== VISUALIZATION  ============================================
 #===============================================================================
 
-EvdGui_dict.cxx: NanoProxyBuilders.h SynthTracks.h CmsNanoClasses.hxx EvdGuiLinkDef.h .synth_config
+EvdGui_dict.cxx: NanoProxyBuilders.h SynthTracks.h CmsNanoClasses.hxx EvdGuiLinkDef.h .synth_config $(VSDNANO)/FWDataCollection.h
 	@rm -f EvdGui_dict.cxx
 	rootcling -f EvdGui_dict.cxx -I$(VSDNANO) $(SYNTH_FLAGS) NanoProxyBuilders.h EvdGuiLinkDef.h
 
