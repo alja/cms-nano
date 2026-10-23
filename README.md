@@ -11,7 +11,7 @@ cms-nano reads NanoAOD directly: it generates one C++ class per collection from 
 - ROOT built from the `master` branch, with `root7`, `webgui` and `http` enabled (see below)
 - A C++17 compiler (GCC or Clang)
 - [nlohmann/json](https://github.com/nlohmann/json) headers (Fedora: `json-devel`, Debian/Ubuntu: `nlohmann-json3-dev`)
-- A checkout of [VSDNano](https://github.com/alja/VSDNano), branch `fw-provider` (see below)
+- A checkout of [VSDNano](https://github.com/alja/VSDNano) (see below)
 - A web browser to view the display
 
 ## Building ROOT from master
@@ -48,7 +48,7 @@ root-config --features | tr ' ' '\n' | grep -E '^(root7|webgui|http)$'
 ```bash
 source ~/root-dev/master/build/bin/thisroot.sh   # in every new shell
 
-git clone --branch fw-provider https://github.com/alja/VSDNano.git ~/root-dev/VSDNano
+git clone https://github.com/alja/VSDNano.git ~/root-dev/VSDNano
 git clone https://github.com/alja/cms-nano.git
 cd cms-nano
 make -j$(nproc) evd
