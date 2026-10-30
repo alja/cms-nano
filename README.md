@@ -8,19 +8,19 @@ cms-nano reads NanoAOD directly: it generates one C++ class per collection from 
 
 ## Requirements
 
-- ROOT built from the `master` branch, with `root7`, `webgui` and `http` enabled (see below)
+- ROOT built from the `cms-fixes` branch of [alja/root](https://github.com/alja/root), with `root7`, `webgui` and `http` enabled (see below)
 - A C++17 compiler (GCC or Clang)
 - [nlohmann/json](https://github.com/nlohmann/json) headers (Fedora: `json-devel`, Debian/Ubuntu: `nlohmann-json3-dev`)
 - A checkout of [VSDNano](https://github.com/alja/VSDNano) (see below)
 - A web browser to view the display
 
-## Building ROOT from master
+## Building ROOT
 
-EVE 7 changes often, so use a recent ROOT built from `master` rather than a release.
+Use the `cms-fixes` branch of [alja/root](https://github.com/alja/root): recent ROOT `master` plus EVE 7 fixes that cms-nano needs and that are not in [root-project/root](https://github.com/root-project/root) yet. Without them, for example, a display aborts on files without calorimeter towers, such as NanoAOD, in a Debug build.
 
 ```bash
 mkdir -p ~/root-dev/master && cd ~/root-dev/master
-git clone --branch master https://github.com/root-project/root.git root
+git clone --branch cms-fixes https://github.com/alja/root.git root
 
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Debug \
