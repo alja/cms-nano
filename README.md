@@ -16,7 +16,7 @@ cms-nano reads NanoAOD directly: it generates one C++ class per collection from 
 
 ## Building ROOT
 
-Use the `cms-fixes` branch of [alja/root](https://github.com/alja/root): recent ROOT `master` plus EVE 7 fixes that cms-nano needs and that are not in [root-project/root](https://github.com/root-project/root) yet. Without them, for example, a display aborts on files without calorimeter towers, such as NanoAOD, in a Debug build.
+Use the `cms-fixes` branch of [alja/root](https://github.com/alja/root): recent ROOT `master` plus EVE 7 fixes that cms-nano needs and that are not in [root-project/root](https://github.com/root-project/root) yet. Without them, for example, a display aborts on files without calorimeter towers, such as NanoAOD, in a Debug build, and the energy towers of jets are drawn half transparent in the RPhi and RhoZ views whatever their transparency is set to.
 
 ```bash
 mkdir -p ~/root-dev/master && cd ~/root-dev/master
