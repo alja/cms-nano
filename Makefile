@@ -3,6 +3,9 @@ CPPFLAGS := -I$(shell root-config --incdir 2> /dev/null)
 CXXFLAGS := -O0 -g -fPIC $(shell root-config --auxcflags 2> /dev/null)
 
 
+# plain 'make' builds the event display
+.DEFAULT_GOAL := evd
+
 ROOTFILE ?= BTag_100.root
 CONFIG   ?= cmap.json
 
