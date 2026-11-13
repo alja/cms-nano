@@ -83,6 +83,25 @@ public:
          s.m_name = name;
          s.m_itemClass = m_event.RefColl(name).get_item_class()->GetName();
          s.m_proxyBuilder = c.value("proxyBuilder", "");
+         // A templated builder treats every item as the class in its template
+         // argument, so that must be the collection's own class: a mismatch,
+         // e.g. VertexProxyBuilder<nanoaod::PV> for BeamSpot, reads past the
+         // end of the item's members.
+         auto lt = s.m_proxyBuilder.find('<'), gt = s.m_proxyBuilder.rfind('>');
+         if (lt != std::string::npos && gt != std::string::npos && gt > lt)
+         {
+            std::string arg = s.m_proxyBuilder.substr(lt + 1, gt - lt - 1);
+            arg.erase(0, arg.find_first_not_of(' '));
+            arg.erase(arg.find_last_not_of(' ') + 1);
+            if (arg != s.m_itemClass)
+            {
+               printf("Collection %s: proxy builder %s is for %s, not %s; showing it in the table only. "
+                      "Use %s<%s> in the config.\n",
+                      name.c_str(), s.m_proxyBuilder.c_str(), arg.c_str(), s.m_itemClass.c_str(),
+                      s.m_proxyBuilder.substr(0, lt).c_str(), s.m_itemClass.c_str());
+               s.m_proxyBuilder.clear();
+            }
+         }
          s.m_color = c.value("color", int(kBlue));
          s.m_filter = c.value("filter", "");
          if (c.contains("var"))

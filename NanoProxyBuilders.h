@@ -83,6 +83,26 @@ class ElectronProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 };
 
 /////////////////////////////////////////////////////////////////////////////////////
+// Accessors that only some generated classes have, depending on the collection
+// and on the NanoAOD version the classes were generated from.
+namespace cand_detail
+{
+#define CAND_HAS(NAME)                                                                   \
+   template <class T, class = void>                                                      \
+   struct has_##NAME : std::false_type {};                                               \
+   template <class T>                                                                    \
+   struct has_##NAME<T, std::void_t<decltype(std::declval<T &>().NAME())>> : std::true_type {};
+
+CAND_HAS(charge)
+CAND_HAS(pdgId)
+CAND_HAS(vx)
+CAND_HAS(x)
+CAND_HAS(y)
+#undef CAND_HAS
+} // namespace cand_detail
+
+// A point at x, y, z. A class without x() and y(), such as BeamSpot, which only
+// has z, is drawn on the beam line.
 template<typename T>
 class VertexProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 {
@@ -92,7 +112,12 @@ class VertexProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 
       T& pv = (T&)(c_pv);
       REvePointSet* ps = new REvePointSet();
-      ps->SetNextPoint(pv.x(), pv.y(), pv.z());
+      float x = 0, y = 0;
+      if constexpr (cand_detail::has_x<T>::value)
+         x = pv.x();
+      if constexpr (cand_detail::has_y<T>::value)
+         y = pv.y();
+      ps->SetNextPoint(x, y, pv.z());
       ps->SetMarkerSize(4);
       this->SetupAddElement(ps, iItemHolder);
    }
@@ -546,19 +571,6 @@ public:
 // are taken from the item when its class has them, depending on the NanoAOD
 // version the classes were generated from.
 
-namespace cand_detail
-{
-#define CAND_HAS(NAME)                                                                   \
-   template <class T, class = void>                                                      \
-   struct has_##NAME : std::false_type {};                                               \
-   template <class T>                                                                    \
-   struct has_##NAME<T, std::void_t<decltype(std::declval<T &>().NAME())>> : std::true_type {};
-
-CAND_HAS(charge)
-CAND_HAS(pdgId)
-CAND_HAS(vx)
-#undef CAND_HAS
-} // namespace cand_detail
 
 template<typename T>
 class CandidateProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
