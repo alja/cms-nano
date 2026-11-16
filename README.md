@@ -8,19 +8,19 @@ cms-nano reads NanoAOD directly: it generates one C++ class per collection from 
 
 ## Requirements
 
-- ROOT built from the `cms-fixes` branch of [alja/root](https://github.com/alja/root), with `root7`, `webgui` and `http` enabled (see below)
+- ROOT built from the `window-manager` branch of [alja/root](https://github.com/alja/root), with `root7`, `webgui` and `http` enabled (see below)
 - A C++17 compiler (GCC or Clang)
 - [nlohmann/json](https://github.com/nlohmann/json) headers (Fedora: `json-devel`, Debian/Ubuntu: `nlohmann-json3-dev`)
-- A checkout of [VSDNano](https://github.com/alja/VSDNano) (see below)
+- A checkout of the `window-manager` branch of [VSDNano](https://github.com/alja/VSDNano) (see below)
 - A web browser to view the display
 
 ## Building ROOT
 
-Use the `cms-fixes` branch of [alja/root](https://github.com/alja/root): recent ROOT `master` plus EVE 7 fixes that cms-nano needs and that are not in [root-project/root](https://github.com/root-project/root) yet. Without them, for example, a display aborts on files without calorimeter towers, such as NanoAOD, in a Debug build, and the energy towers of jets are drawn half transparent in the RPhi and RhoZ views whatever their transparency is set to.
+Use the `window-manager` branch of [alja/root](https://github.com/alja/root): recent ROOT `master` plus EVE 7 changes that are not in [root-project/root](https://github.com/root-project/root) yet. It has the window manager (`REveWindowManager`), which lays out the views and lets you rearrange them, and which the `window-manager` branch of VSDNano needs to build. It also has fixes cms-nano needs: without them, for example, a display aborts on files without calorimeter towers, such as NanoAOD, in a Debug build.
 
 ```bash
 mkdir -p ~/root-dev/master && cd ~/root-dev/master
-git clone --branch cms-fixes https://github.com/alja/root.git root
+git clone --branch window-manager https://github.com/alja/root.git root
 
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Debug \
@@ -48,11 +48,13 @@ root-config --features | tr ' ' '\n' | grep -E '^(root7|webgui|http)$'
 ```bash
 source ~/root-dev/master/build/bin/thisroot.sh   # in every new shell
 
-git clone https://github.com/alja/VSDNano.git ~/root-dev/VSDNano
-git clone https://github.com/alja/cms-nano.git
+git clone --branch window-manager https://github.com/alja/VSDNano.git ~/root-dev/VSDNano
+git clone --branch window-manager https://github.com/alja/cms-nano.git
 cd cms-nano
-make -j$(nproc) evd
+make -j$(nproc)
 ```
+
+Plain `make` builds `evd`, the same as `make evd`.
 
 The Makefile looks for VSDNano in `~/root-dev/VSDNano`. To use another location, pass it to every `make` call, e.g. `make evd VSDNANO=/path/to/VSDNano`. `make evd` builds VSDNano's libraries if they are missing; after changing VSDNano, rebuild it with `make` in its own directory.
 
@@ -88,6 +90,8 @@ This builds what is out of date and runs:
 ```
 
 `evd` prints a URL, `http://localhost:9092/win1/`. Open it in a browser. If port 9092 is in use (for example by another `evd`), ROOT picks a different port and prints that one instead.
+
+The display starts with four views: 3D and RPhi on top, RhoZ and the table below. To rearrange them, drag a view by its toolbar (the strip with its name and the grip of dots): drop it on the middle of another view to swap the two, near an edge of another view to place it beside it, or outside the browser window to open it in a window of its own (the URL ends in `?Single=<view name>`).
 
 To use a different data file or config:
 
