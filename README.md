@@ -89,7 +89,7 @@ This builds what is out of date and runs:
 ./evd BTag_100.root --fconfig cmap.json
 ```
 
-`evd` prints a URL, `http://localhost:9092/win1/`. Open it in a browser. If port 9092 is in use (for example by another `evd`), ROOT picks a different port and prints that one instead.
+`evd` runs without a ROOT prompt; add `--rint` for one in the terminal (TRint), e.g. to inspect the display through `gEve`. It prints a URL, `http://localhost:9092/win1/`. Open it in a browser. If port 9092 is in use (for example by another `evd`), ROOT picks a different port and prints that one instead.
 
 The display starts with four views: 3D and RPhi on top, RhoZ and the table below. To rearrange them, drag a view by its toolbar (the strip with its name and the grip of dots): drop it on the middle of another view to swap the two, near an edge of another view to place it beside it, or outside the browser window to open it in a window of its own (the URL ends in `?Single=<view name>`).
 

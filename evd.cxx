@@ -3,6 +3,7 @@
 // event display from VSDNano: scenes, views, managers and GUI
 #include "evd_main.cc"
 
+#include "TApplication.h"
 #include "TEnv.h"
 #include "TRint.h"
 
@@ -17,13 +18,15 @@ int main(int argc, char **argv)
 {
    const char *rootFile = nullptr;
    const char *configFile = "cmap.json";  // default
+   bool rint = false;                     // ROOT prompt in the terminal
 
    if (argc > 1)
       rootFile = argv[1];
    else
    {
       std::cerr << "Usage: " << argv[0]
-                << " <root-file> [--fconfig <config.json>]\n";
+                << " <root-file> [--fconfig <config.json>] [--rint]\n"
+                << "  --rint   run with a ROOT prompt (TRint) in the terminal\n";
       return 1;
    }
 
@@ -40,6 +43,10 @@ int main(int argc, char **argv)
             return 1;
          }
          configFile = argv[++i];
+      }
+      else if (arg == "--rint")
+      {
+         rint = true;
       }
       else
       {
@@ -63,7 +70,8 @@ int main(int argc, char **argv)
    char **dummyArgv = const_cast<char **>(dummyArgvArray);
 
    int dummyArgc = 1;
-   TRint *app = new TRint("evd-test", &dummyArgc, dummyArgv);
+   TApplication *app = rint ? new TRint("evd", &dummyArgc, dummyArgv)
+                            : new TApplication("evd", &dummyArgc, dummyArgv);
 
    gEnv->SetValue("WebGui.HttpMaxAge", 0);
    gEnv->SetValue("WebGui.HttpPort", 9092);
