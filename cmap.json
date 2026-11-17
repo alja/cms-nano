@@ -7,7 +7,7 @@
       },
       {
         "name": "BeamSpot",
-        "proxyBuilder": "nanoaod::VertexProxyBuilder<nanoaod::PV>",
+        "proxyBuilder": "nanoaod::VertexProxyBuilder<nanoaod::BeamSpot>",
         "color": 632
       },
       {
