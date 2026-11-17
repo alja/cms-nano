@@ -195,7 +195,9 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
       if (auto fwc = dynamic_cast<FWDataCollection *>(collection))
       {
          fwc->assertParameter(kSynthTracks, true);
-         fwc->assertColorParameter(kSynthTrackColor, Color_t(kGray + 2));
+         // by default the color of the jets; the collection has it by now
+         m_synthDefaultColor = collection->GetMainColor();
+         fwc->assertColorParameter(kSynthTrackColor, m_synthDefaultColor);
          fwc->assertParameter(kSynthTrackMinPt, 1., 0., 1000.);
       }
 #endif
@@ -205,13 +207,19 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
    // GUI parameter of the jet collection: draw synthetic charged tracks
    // (Pythia 8 constituents, see SynthTracks.h) inside each jet.
    static constexpr const char *kSynthTracks = "SynthTracks";
-   // ROOT color index of the synthetic tracks, e.g. 922 dark gray, 920 light gray, 1 black, 616 magenta.
+   // ROOT color index of the synthetic tracks, by default the jets' color;
+   // e.g. 922 dark gray, 920 light gray, 1 black, 616 magenta.
    // Not green: that is the selection highlight.
    static constexpr const char *kSynthTrackColor = "SynthTrackColor";
    // Synthetic tracks with lower pt (GeV) are not drawn.
    static constexpr const char *kSynthTrackMinPt = "SynthTrackMinPt";
 
    static constexpr float kSynthTrackDepth = -1;
+
+   // Default of SynthTrackColor, the jets' color at setup. While the parameter
+   // has it, the tracks take their jet's color, like the cone: so they follow
+   // the dark-mode palette, which recolors the collection, and color changes.
+   Color_t m_synthDefaultColor{-1};
 
    // The whole jet item is projected at kJetLayer; move the projected
    // synthetic tracks in front of it.
@@ -447,11 +455,13 @@ class JetProxyBuilder: public REveDataSimpleProxyBuilderTemplate<T>
       {
          auto fwc = dynamic_cast<FWDataCollection *>(this->Collection());
          Color_t color = Color_t(fwc->getLongParameter(kSynthTrackColor));
+         bool jetColor = color == m_synthDefaultColor;
          double minPt = fwc->getDoubleParameter(kSynthTrackMinPt);
          for (auto track : MakeSynthTracks(dj, context->GetPropagator(), minPt))
          {
-            track->SetMainColor(color);
-            this->SetupAddElement(track, iItemHolder, false);
+            if (!jetColor)
+               track->SetMainColor(color);
+            this->SetupAddElement(track, iItemHolder, jetColor);
          }
       }
 #endif

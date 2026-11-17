@@ -164,7 +164,7 @@ The default table columns are set in `NanoProvider::SetupTables()` in `NanoProvi
 
 ## Synthetic jet tracks
 
-`JetProxyBuilder` also draws plausible charged-particle tracks (dark gray) inside
+`JetProxyBuilder` also draws plausible charged-particle tracks, in the jets' color, inside
 each jet. They are generated, not reconstructed: Pythia 8 showers and
 hadronizes a q qbar or g g pair (chosen by the quark/gluon score or MC
 flavour), FastJet picks the jet, and its constituents are matched to the
@@ -174,7 +174,8 @@ seeds the random generator, so a jet always gets the same tracks. See
 
 Switch them off with the `SynthTracks` checkbox in the Jet collection editor,
 set their color with the `SynthTrackColor` color picker (in the config a ROOT
-color index: 922 dark gray, the default, 920 light gray, 1 black, 616 magenta), and hide the softer ones with `SynthTrackMinPt`
+color index, e.g. 922 dark gray, 920 light gray, 1 black, 616 magenta; by default
+they have their jet's color and follow it, also in dark mode), and hide the softer ones with `SynthTrackMinPt`
 (GeV, default 1; 0 draws all of them), or in the config:
 
 ```json
