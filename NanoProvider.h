@@ -118,6 +118,9 @@ public:
          items.push_back(mc.get_item(i));
    }
 
+   // the jets in the table view at startup, if there are any; else the first collection
+   std::string GetTableCollection() override { return "Jet"; }
+
    void SetupTables(ROOT::Experimental::REveTableViewInfo *tableInfo) override
    {
       tableInfo->table("nanoaod::Jet").column("pt", 1, "i.pt()").column("eta", 3, "i.eta()").column("phi", 3, "i.phi()");
