@@ -6,6 +6,11 @@
         "color": 632
       },
       {
+        "name": "BeamSpot",
+        "proxyBuilder": "nanoaod::VertexProxyBuilder<nanoaod::BeamSpot>",
+        "color": 632
+      },
+      {
         "name": "CaloMET",
         "proxyBuilder": "nanoaod::METProxyBuilder<nanoaod::CaloMET>",
         "color": 800
@@ -32,7 +37,18 @@
         "filter": "i.pt() > 0.5"
       },
       {
-        "name": "HLT"
+        "name": "Photon",
+        "proxyBuilder": "nanoaod::CandidateProxyBuilder<nanoaod::Photon>",
+        "color": 416,
+        "filter": "i.pt() > 0.5"
+      },
+      {
+        "name": "HLT",
+        "trigger": true
+      },
+      {
+        "name": "L1",
+        "trigger": true
       }
     ]
 }
