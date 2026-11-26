@@ -18,6 +18,9 @@
 //     "color": 632, "filter": "i.pt() > 20", "var": [ ... ] }
 // "proxyBuilder", "color", "filter" and "var" are optional. Collections that
 // are not in the data file, or have no compiled-in class, are left out.
+#include <chrono>
+#include <memory>
+
 class NanoProvider : public FWProvider
 {
    nanoaod::Event m_event;
@@ -29,12 +32,62 @@ class NanoProvider : public FWProvider
    TLeaf *m_lumiLeaf{nullptr};
    TLeaf *m_eventLeaf{nullptr};
 
+   // trigger bits of the "trigger" collections, read for all events up front
+   std::vector<std::string>      m_triggerNames;  // branch names, e.g. HLT_IsoMu24
+   std::vector<std::vector<int>> m_firedTriggers; // per event, indices in m_triggerNames
+
    static double leafValue(TLeaf *l, Long64_t entry)
    {
       if (!l)
          return 0;
       l->GetBranch()->GetEntry(entry);
       return l->GetValue();
+   }
+
+   void LoadTriggers(const std::string &file)
+   {
+      std::vector<std::string> prefixes;
+      for (const auto &c : m_config["collections"])
+         if (c.value("trigger", false))
+            prefixes.push_back(c["name"].get<std::string>() + "_");
+      if (prefixes.empty())
+         return;
+
+      std::unique_ptr<TFile> f(TFile::Open(m_title.c_str()));
+      TTree *tree = f ? f->Get<TTree>("Events") : nullptr;
+      if (!tree)
+         return;
+
+      auto t0 = std::chrono::steady_clock::now();
+      Long64_t n = tree->GetEntries();
+      m_firedTriggers.assign(n, {});
+      // branch by branch, so that each basket is read and unzipped once
+      for (auto *obj : *tree->GetListOfBranches())
+      {
+         auto *br = static_cast<TBranch *>(obj);
+         std::string name = br->GetName();
+         bool match = false;
+         for (auto &p : prefixes)
+            match = match || name.compare(0, p.size(), p) == 0;
+         TLeaf *leaf = match ? static_cast<TLeaf *>(br->GetListOfLeaves()->At(0)) : nullptr;
+         if (!leaf || br->GetListOfLeaves()->GetEntries() != 1 || leaf->GetLenStatic() != 1 || leaf->GetLeafCount())
+            continue; // not a scalar trigger bit
+
+         int id = m_triggerNames.size();
+         m_triggerNames.push_back(name);
+         for (Long64_t e = 0; e < n; ++e)
+         {
+            br->GetEntry(e);
+            if (leaf->GetValue() != 0)
+               m_firedTriggers[e].push_back(id);
+         }
+         br->DropBaskets("all");
+      }
+      std::string patterns;
+      for (auto &p : prefixes)
+         patterns += (patterns.empty() ? "" : " ") + p + "*";
+      printf("NanoProvider: %zu trigger bits (%s) read for %lld events in %.1f s\n", m_triggerNames.size(),
+             patterns.c_str(), n, std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count());
    }
 
 public:
@@ -52,6 +105,8 @@ public:
          m_lumiLeaf = tree->GetLeaf("luminosityBlock");
          m_eventLeaf = tree->GetLeaf("event");
       }
+
+      LoadTriggers(file);
    }
 
    const std::string &GetTitle() const override { return m_title; }
@@ -97,6 +152,17 @@ public:
       nanoaod::MamaCollection &mc = m_event.RefColl(collection);
       for (int i = 0; i < mc.get_n_entries(); ++i)
          items.push_back(mc.get_item(i));
+   }
+
+   bool HasTriggers() override { return !m_triggerNames.empty(); }
+
+   void GetFiredTriggers(Long64_t eventIdx, std::vector<std::string> &names) override
+   {
+      names.clear();
+      if (eventIdx < 0 || eventIdx >= (Long64_t)m_firedTriggers.size())
+         return;
+      for (int id : m_firedTriggers[eventIdx])
+         names.push_back(m_triggerNames[id]);
    }
 
    void SetupTables(ROOT::Experimental::REveTableViewInfo *tableInfo) override
