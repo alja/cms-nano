@@ -32,6 +32,9 @@
 #include "TDatabasePDG.h"
 #include "TParticlePDG.h"
 
+#include <type_traits>
+#include <utility>
+
 // Proxy builders for the generated NanoAOD classes. They are templates on the
 // item class, instantiated in EvdGuiLinkDef.h from the proxyBuilder entries in
 // the config, e.g. "nanoaod::JetProxyBuilder<nanoaod::Jet>". They live in
@@ -83,6 +86,34 @@ class ElectronProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 };
 
 /////////////////////////////////////////////////////////////////////////////////////
+// x() and y() of a vertex-like item, 0 if its class has no such member. NanoAOD's
+// BeamSpot, for example, only has z.
+template <typename T, typename = void>
+struct HasX : std::false_type {};
+template <typename T>
+struct HasX<T, std::void_t<decltype(std::declval<const T &>().x())>> : std::true_type {};
+template <typename T, typename = void>
+struct HasY : std::false_type {};
+template <typename T>
+struct HasY<T, std::void_t<decltype(std::declval<const T &>().y())>> : std::true_type {};
+
+template <typename T>
+float VertexX(const T &v)
+{
+   if constexpr (HasX<T>::value)
+      return v.x();
+   else
+      return 0;
+}
+template <typename T>
+float VertexY(const T &v)
+{
+   if constexpr (HasY<T>::value)
+      return v.y();
+   else
+      return 0;
+}
+
 template<typename T>
 class VertexProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 {
@@ -92,7 +123,7 @@ class VertexProxyBuilder : public REveDataSimpleProxyBuilderTemplate<T>
 
       T& pv = (T&)(c_pv);
       REvePointSet* ps = new REvePointSet();
-      ps->SetNextPoint(pv.x(), pv.y(), pv.z());
+      ps->SetNextPoint(VertexX(pv), VertexY(pv), pv.z());
       ps->SetMarkerSize(4);
       this->SetupAddElement(ps, iItemHolder);
    }
